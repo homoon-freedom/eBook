@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>eBook(Supabase & Font Indicator)</title>
+    <title>eBook (Integrated Editor)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -12,7 +12,7 @@
             --bg-canvas: #1a1a1a;
             --page-bg: #fcfaf5;
             --text-color: #2c3e50;
-            --font-size: 17px; /* 기본값 19 */
+            --font-size: 17px;
             --line-color: color-mix(in srgb, var(--text-color), transparent 85%);
         }
 
@@ -42,20 +42,11 @@
         }
 
         .page-content { 
-            font-size: var(--font-size); 
-            line-height: 1.8; 
-            text-align: justify; 
-            word-break: break-all;
-            white-space: pre-wrap;
+            font-size: var(--font-size); line-height: 1.8; text-align: justify; 
+            word-break: break-all; white-space: pre-wrap;
         }
 
-        .page-content img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 10px 0;
-            border-radius: 8px;
-        }
+        .page-content img { max-width: 100%; height: auto; display: block; margin: 10px 0; border-radius: 8px; }
 
         .book-info { 
             position: absolute; width: 80%; left: 10%; 
@@ -64,27 +55,14 @@
         }
         
         .book-header { 
-            top: 3vh; padding-bottom: 8px; 
-            border-bottom: 1.5px solid var(--line-color);
+            top: 3vh; padding-bottom: 8px; border-bottom: 1.5px solid var(--line-color);
             display: flex; justify-content: space-between; align-items: center;
         }
         
-        .book-footer { 
-            bottom: 2.5vh; padding-top: 8px; 
-            border-top: 1.5px solid var(--line-color);
-            text-align: center;
-        }
+        .book-footer { bottom: 2.5vh; padding-top: 8px; border-top: 1.5px solid var(--line-color); text-align: center; }
 
-        .font-controls { display: flex; gap: 8px; align-items: center; pointer-events: auto; }
-        
-        /* 폰트 크기 숫자 표시 스타일 */
-        #font-size-val {
-            min-width: 20px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-            color: var(--text-color);
-        }
+        .font-controls { display: flex; gap: 8px; align-items: center; }
+        #font-size-val { min-width: 20px; text-align: center; font-weight: bold; font-size: 12px; color: var(--text-color); }
 
         .font-btn {
             background: none; border: 1px solid var(--line-color);
@@ -110,40 +88,55 @@
             width: min(700px, 90%); max-height: 85vh; background: white; padding: 25px; 
             border-radius: 25px; z-index: 3000; display: none; color: #333; overflow-y: auto;
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            box-sizing: border-box;
         }
         
         .theme-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 15px 0; }
         .theme-item { height: 40px; border-radius: 10px; border: 2px solid #eee; cursor: pointer; }
 
-        textarea { width: 100%; height: 250px; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-family: inherit; margin-top: 10px; line-height: 1.5; }
-        .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        /* 입력창 스타일 수정: box-sizing 추가 */
+        textarea { 
+            width: 100%; 
+            box-sizing: border-box; 
+            height: 250px; 
+            padding: 12px; 
+            border-radius: 10px; 
+            border: 1px solid #ddd; 
+            font-family: inherit; 
+            margin-top: 10px; 
+            line-height: 1.5; 
+            resize: vertical;
+            display: block;
+        }
+        
+        /* 인풋박스 스타일 수정: box-sizing 추가 */
+        input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            display: block;
+        }
+
+        .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; box-sizing: border-box; }
+        
+        .btn-new { background: #2ecc71; margin-bottom: 0px; padding: 10px 15px; font-size: 13px; width: auto; }
 
         #temp-measurer {
             width: calc(var(--p-width) - 20vw); font-size: var(--font-size);
             line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all;
         }
         
-        .list-item {
-            padding: 15px; border-bottom: 1px solid #eee;
-            display: flex; justify-content: space-between; align-items: center;
-            transition: 0.2s;
-        }
-        .list-item:hover { background: #f8f9fa; }
+        .list-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .list-main { cursor: pointer; flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
         .list-title { font-weight: bold; color: #2c3e50; }
         .list-page-tag { font-size: 11px; color: #3498db; background: #ebf5ff; padding: 2px 6px; border-radius: 4px; width: fit-content; }
-        
-        .delete-btn {
-            color: #e74c3c; border: 1px solid #e74c3c; background: white;
-            padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;
-            transition: 0.2s; margin-left: 10px;
-        }
-        .delete-btn:hover { background: #e74c3c; color: white; }
-.editing-active {
-    outline: 2px dashed #3498db !important;
-    background: rgba(52, 152, 219, 0.05) !important;
-    cursor: text !important;
-}
+        .delete-btn { color: #e74c3c; border: 1px solid #e74c3c; background: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+
+        .book-highlight { color: color-mix(in srgb, #3498db, var(--text-color) 30%); }
+        .sup-highlight { font-size: 0.75em; vertical-align: super; line-height: 0; margin-left: 2px; }
+        .book-bold { color: var(--text-color); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -154,7 +147,6 @@
                 <span id="display-title">불러온 책 없음</span>
                 <div class="font-controls">
                     <button class="font-btn" onclick="changeFontSize(-1)">-</button>
-                    <!-- 폰트 크기 숫자 표시되는 곳 -->
                     <span id="font-size-val">17</span>
                     <button class="font-btn" onclick="changeFontSize(1)">+</button>
                 </div>
@@ -168,16 +160,18 @@
 
         <div class="bottom-menu">
             <button class="bottom-btn" onclick="openLibrary()">📚 내 서재</button>
-            <button class="bottom-btn" id="edit-toggle-btn" onclick="toggleDirectEdit()" style="background: #3498db;">📝 직접 수정</button>
-            <button class="bottom-btn" onclick="openModal('setting-modal')">🎨 테마/편집</button>
+            <button class="bottom-btn" onclick="openEditorModal()">🎨 테마/편집</button>
             <button class="bottom-btn" onclick="saveBookmark()" style="background: #f1c40f; color: #2c3e50; border: none;">📍 북마크</button>
             <button class="bottom-btn" onclick="openBookmarkList()">🔖 북마크 리스트</button>
         </div>
     </div>
 
-    <!-- 모달들은 동일하므로 생략하거나 기존 것 사용 -->
     <div id="setting-modal" class="modal">
-        <h3>🎨 도서 편집</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 id="modal-mode-title" style="margin: 0;">🎨 도서 편집</h3>
+            <button class="bottom-btn btn-new" onclick="prepareNewBook()">🆕 새 글 추가</button>
+        </div>
+        
         <div class="theme-grid">
             <div class="theme-item" style="background:#fcfaf5;" onclick="setTheme('#fcfaf5', '#2c3e50', '#1a1a1a')"></div>
             <div class="theme-item" style="background:#ffffff;" onclick="setTheme('#ffffff', '#111111', '#f0f0f0')"></div>
@@ -185,20 +179,25 @@
             <div class="theme-item" style="background:#e8f4ea;" onclick="setTheme('#e8f4ea', '#1e3a24', '#0d1a11')"></div>
             <div class="theme-item" style="background:#2d3436;" onclick="setTheme('#2d3436', '#dfe6e9', '#000000')"></div>
         </div>
-        <input type="text" id="book-title" value="새 이북" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
+
+        <p style="font-size: 12px; color: #666; margin-bottom: 5px;">제목</p>
+        <input type="text" id="book-title" placeholder="제목을 입력하세요">
+        
+        <p style="font-size: 12px; color: #666; margin-bottom: 5px; margin-top: 15px;">내용</p>
         <textarea id="editor" placeholder="내용을 입력하세요."></textarea>
-        <button class="btn-action" onclick="saveToSupabase()">💾 새 글로 저장</button>
+        
+        <button id="save-btn" class="btn-action" onclick="handleSave()">💾 저장하기</button>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">닫기</button>
     </div>
 
     <div id="library-modal" class="modal">
-        <h3>📚 내 서재 (관리)</h3>
+        <h3>📚 내 서재</h3>
         <div id="book-list-container">로드 중...</div>
         <button class="btn-action" style="background:#95a5a6; margin-top:15px;" onclick="closeModal('library-modal')">닫기</button>
     </div>
 
     <div id="bookmark-list-modal" class="modal">
-        <h3>🔖 저장된 북마크 지점</h3>
+        <h3>🔖 저장된 북마크</h3>
         <div id="bookmark-container">로드 중...</div>
         <button class="btn-action" style="background:#95a5a6; margin-top:15px;" onclick="closeModal('bookmark-list-modal')">닫기</button>
     </div>
@@ -215,31 +214,52 @@
         const editor = document.getElementById('editor');
         const titleInput = document.getElementById('book-title');
         const pageIndicator = document.getElementById('page-indicator');
-        const fontSizeVal = document.getElementById('font-size-val'); // 숫자 표시 엘리먼트
+        const fontSizeVal = document.getElementById('font-size-val');
         
         let currentIndex = 0;
         let totalPages = 1;
         let currentFontSize = 17;
         let currentBookId = null;
 
-        // --- 폰트 크기 변경 함수 (숫자 업데이트 추가) ---
         function changeFontSize(delta) {
             currentFontSize = Math.max(12, Math.min(40, currentFontSize + delta));
-            // CSS 변수 업데이트
             document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-            // 헤더의 숫자 텍스트 업데이트
             fontSizeVal.innerText = currentFontSize;
-            // 페이지 재계산
             renderBook();
         }
 
-        // --- 나머지 기능 함수 (기존과 동일) ---
-        async function saveToSupabase() {
-            const title = titleInput.value;
+        function openEditorModal() {
+            document.getElementById('modal-mode-title').innerText = currentBookId ? "📝 도서 수정" : "🆕 새 도서 작성";
+            openModal('setting-modal');
+        }
+
+        function prepareNewBook() {
+            if (confirm('작성 중인 내용을 지우고 새 글을 작성할까요?')) {
+                currentBookId = null;
+                titleInput.value = "";
+                editor.value = "";
+                document.getElementById('modal-mode-title').innerText = "🆕 새 도서 작성";
+            }
+        }
+
+        async function handleSave() {
+            const title = titleInput.value.trim() || "제목 없음";
             const content = editor.value;
-            const { data, error } = await _supabase.from('ebooks').insert([{ title, content }]).select();
-            if (error) alert('저장 실패');
-            else { alert('서재에 추가되었습니다.'); currentBookId = data[0].id; renderBook(); closeModal('setting-modal'); }
+            
+            if (currentBookId) {
+                const { error } = await _supabase.from('ebooks').update({ title, content }).eq('id', currentBookId);
+                if (error) alert('수정 실패');
+                else { alert('수정사항이 저장되었습니다.'); renderBook(); closeModal('setting-modal'); }
+            } else {
+                const { data, error } = await _supabase.from('ebooks').insert([{ title, content }]).select();
+                if (error) alert('저장 실패');
+                else {
+                    alert('서재에 새로운 책이 추가되었습니다.');
+                    currentBookId = data[0].id;
+                    renderBook();
+                    closeModal('setting-modal');
+                }
+            }
         }
 
         async function deleteBook(id, e) {
@@ -249,7 +269,6 @@
             if (!error) {
                 alert('삭제되었습니다.');
                 if (document.getElementById('library-modal').style.display === 'block') openLibrary();
-                if (document.getElementById('bookmark-list-modal').style.display === 'block') openBookmarkList();
                 if (currentBookId === id) { currentBookId = null; editor.value = ""; titleInput.value = ""; renderBook(); }
             }
         }
@@ -307,122 +326,47 @@
             }
         }
 
- async function renderBook() {
-    const rawContent = editor.value || "";
-    const viewportH = document.querySelector('.book-viewport').offsetHeight;
-    const maxH = viewportH * 0.82; 
-    
-    viewerContainer.innerHTML = "";
-    tempMeasurer.innerHTML = "";
-    
-    // 1. 이미지 및 [강조텍스트] 미리 변환
-    // 괄호를 먼저 태그로 다 바꾼 뒤에 페이지를 나눕니다.
-    const formattedContent = rawContent.replace(/\[(.*?)\]/g, 
-        '<strong class="book-bold">$1</strong>');
-
-    // 2. 이미지 태그와 일반 텍스트(강조태그 포함) 분리
-    const parts = formattedContent.split(/(<img[^>]*>)/g);
-    let currentPageHTML = "";
-    let pageNum = 1;
-
-    for (let part of parts) {
-        if (part.startsWith('<img')) {
-            tempMeasurer.innerHTML = currentPageHTML + part;
-            if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
-                addPageToViewer(currentPageHTML, pageNum++);
-                currentPageHTML = part;
-            } else {
-                currentPageHTML += part;
-            }
-        } else {
-            // 3. 단어 단위로 쪼개되, HTML 태그(<...>)는 하나로 취급하여 쪼개기
-            // 이 정규식은 공백 또는 HTML 태그를 기준으로 나눕니다.
-            const tokens = part.split(/(<[^>]*>|\s+)/);
+        async function renderBook() {
+            const rawContent = editor.value || "";
+            const viewportH = document.querySelector('.book-viewport').offsetHeight;
+            const maxH = viewportH * 0.82; 
+            viewerContainer.innerHTML = "";
+            tempMeasurer.innerHTML = "";
             
-            for (let token of tokens) {
-                if (!token) continue;
-                const testContent = currentPageHTML + token;
-                tempMeasurer.innerHTML = testContent;
-                
-                if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
-                    addPageToViewer(currentPageHTML, pageNum++);
-                    currentPageHTML = token;
-                    tempMeasurer.innerHTML = token;
+            const formattedContent = rawContent
+                .replace(/\[(.*?)\]/g, '<strong class="book-bold">$1</strong>')
+                .replace(/\((\d+)\)/g, '<span class="book-highlight sup-highlight">($1)</span>')
+                .replace(/\(([^0-9].*?)\)/g, '<span class="book-highlight">($1)</span>');
+
+            const parts = formattedContent.split(/(<img[^>]*>)/g);
+            let currentPageHTML = "";
+            let pageNum = 1;
+
+            for (let part of parts) {
+                if (part.startsWith('<img')) {
+                    tempMeasurer.innerHTML = currentPageHTML + part;
+                    if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
+                        addPageToViewer(currentPageHTML); pageNum++; currentPageHTML = part;
+                    } else { currentPageHTML += part; }
                 } else {
-                    currentPageHTML = testContent;
+                    const tokens = part.split(/(<[^>]*>|\s+)/);
+                    for (let token of tokens) {
+                        if (!token) continue;
+                        const testContent = currentPageHTML + token;
+                        tempMeasurer.innerHTML = testContent;
+                        if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
+                            addPageToViewer(currentPageHTML); pageNum++; currentPageHTML = token; tempMeasurer.innerHTML = token;
+                        } else { currentPageHTML = testContent; }
+                    }
                 }
             }
+            if (currentPageHTML.trim() !== "") addPageToViewer(currentPageHTML);
+            totalPages = pageNum || 1;
+            updateSlider();
+            document.getElementById('display-title').innerText = titleInput.value || "불러온 책 없음";
         }
-    }
-    if (currentPageHTML.trim() !== "") addPageToViewer(currentPageHTML, pageNum);
-    totalPages = pageNum || 1;
-    updateSlider();
-    document.getElementById('display-title').innerText = titleInput.value || "불러온 책 없음";
-}
-let isDirectEditing = false;
 
-async function toggleDirectEdit() {
-    if (!currentBookId) return alert('수정할 책을 먼저 불러와주세요.');
-
-    const btn = document.getElementById('edit-toggle-btn');
-    
-    if (!isDirectEditing) {
-        // --- 수정 시작 모드 ---
-        isDirectEditing = true;
-        btn.innerText = "💾 수정 완료(저장)";
-        btn.style.background = "#e74c3c"; // 빨간색으로 변경
-        
-        // 모든 페이지를 편집 가능하게 설정
-        const contents = document.querySelectorAll('.page-content');
-        contents.forEach(content => {
-            content.contentEditable = "true";
-            content.classList.add('editing-active');
-        });
-        
-        alert('화면의 글자를 직접 터치하여 수정하세요. 다 고친 후 [수정 완료] 버튼을 누르면 저장됩니다.');
-        
-    } else {
-        // --- 수정 완료 및 저장 모드 ---
-        if (!confirm('수정한 내용을 저장할까요?')) return;
-
-        // 모든 페이지의 내용을 하나로 합치기
-        const contents = document.querySelectorAll('.page-content');
-        let newFullContent = "";
-        
-        // HTML 태그와 텍스트를 적절히 처리 (br 태그 등을 줄바꿈으로 변환)
-        contents.forEach((content, idx) => {
-            // 주의: [ ] 강조 스타일이나 이미지가 깨지지 않도록 innerHTML 기반 처리 필요
-            // 여기서는 단순 수정을 위해 텍스트 기반으로 합치거나 
-            // 좀 더 정교하게는 raw 데이터 자체를 관리하는 것이 좋으나, 
-            // 현재 구조상 가장 단순한 방법은 editor(textarea)의 값을 업데이트하는 것입니다.
-            // (이미 복잡한 렌더링이 끝난 상태이므로 innerText를 활용합니다)
-            newFullContent += content.innerText + (idx < contents.length - 1 ? "\n" : "");
-        });
-
-        // Supabase 업데이트
-        const { error } = await _supabase
-            .from('ebooks')
-            .update({ content: newFullContent })
-            .eq('id', currentBookId);
-
-        if (error) {
-            alert('저장 중 오류가 발생했습니다.');
-        } else {
-            alert('수정 내용이 저장되었습니다.');
-            isDirectEditing = false;
-            btn.innerText = "📝 직접 수정";
-            btn.style.background = "#3498db";
-            
-            // 편집 모드 해제
-            editor.value = newFullContent; // 원본 데이터 갱신
-            renderBook(); // 다시 깨끗하게 렌더링
-        }
-    }
-}
-
-// 페이지 이동 시 편집 모드 유지 여부 처리 (선택 사항)
-// 이 기능이 켜져있을 때는 페이지 이동을 잠시 막거나 편집을 풀고 이동하는 것이 안전합니다.
-        function addPageToViewer(content, num) {
+        function addPageToViewer(content) {
             const pageDiv = document.createElement('div');
             pageDiv.className = 'page';
             pageDiv.innerHTML = `<div class="page-content">${content}</div>`;
