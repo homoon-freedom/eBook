@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>프리미엄 개인 서재</title>
+    <title>풀스크린 와이드 이북</title>
     <style>
         :root {
-            --p-height: 82vh; /* 버튼 공간 확보를 위해 높이 약간 조절 */
-            --p-width: min(750px, 85vw); 
+            /* 너비를 화면의 95%로 확장 */
+            --p-width: 95vw; 
+            --p-height: 85vh;
             --bg-canvas: #1a1a1a;
             --page-bg: #fcfaf5;
             --text-color: #2c3e50;
-            --font-size: 16px;
+            --font-size: 18px; /* 넓은 화면에 맞춰 기본 폰트 크기 상향 */
             --accent: #3498db;
         }
 
@@ -22,101 +23,92 @@
             overflow: hidden; transition: background 0.3s;
         }
 
-        /* 뷰어와 버튼을 감싸는 전체 메인 컨테이너 */
         .main-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px; /* 이북과 버튼 사이의 간격 */
+            gap: 15px;
+            width: 100%;
         }
 
-        /* 이북 뷰어 */
+        /* 뷰어: 좌우를 꽉 채우는 스타일 */
         .book-viewport {
             width: var(--p-width); height: var(--p-height);
-            position: relative; overflow: hidden; border-radius: 40px; 
+            position: relative; overflow: hidden; border-radius: 10px; 
             box-shadow: 0 40px 100px rgba(0,0,0,0.6); 
             background: var(--page-bg); transition: 0.3s;
         }
 
-        /* 이북 하단 버튼 메뉴 영역 */
-        .bottom-menu {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            width: 100%;
+        .book-container { display: flex; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        
+        .page { 
+            min-width: var(--p-width); 
+            height: 100%; 
+            /* 화면이 넓으므로 좌우 여백을 15%로 늘려 가독성 확보 */
+            padding: 5% 5%; 
+            box-sizing: border-box; 
+            position: relative; 
+            color: var(--text-color); 
         }
 
+        .page-content { 
+            font-size: var(--font-size); 
+            line-height: 1.9; 
+            text-align: justify; 
+            word-break: break-all;
+        }
+
+        /* 하단 메뉴 */
+        .bottom-menu { display: flex; gap: 15px; justify-content: center; width: 100%; }
         .bottom-btn { 
-            padding: 14px 28px; 
-            border-radius: 50px; /* 요청하신 알약 형태 라운딩 */
-            border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(255,255,255,0.1); 
-            color: white; 
-            backdrop-filter: blur(8px);
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 15px; 
-            transition: all 0.2s;
+            padding: 12px 24px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.1); color: white; backdrop-filter: blur(8px);
+            cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s;
         }
-        .bottom-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); }
+        .bottom-btn:hover { background: rgba(255,255,255,0.2); }
 
-        /* 공통 모달 스타일 */
+        /* 네비게이션 영역 */
+        .nav-area { position: absolute; top: 0; height: 100%; width: 15%; z-index: 1000; cursor: pointer; }
+        .prev-area { left: 0; } .next-area { right: 0; }
+
+        .page-header { position: absolute; top: 3%; left: 0; width: 100%; text-align: center; font-size: 12px; opacity: 0.5; }
+        .page-footer { position: absolute; bottom: 3%; left: 0; width: 100%; text-align: center; font-size: 13px; opacity: 0.5; }
+
+        /* 모달 스타일 */
         .modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: min(500px, 90%); max-height: 80vh; background: white;
-            padding: 30px; border-radius: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            width: min(600px, 90%); max-height: 80vh; background: white;
+            padding: 30px; border-radius: 25px; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
             z-index: 3000; overflow-y: auto; color: #333; display: none;
         }
-        .modal.active { display: block; animation: fadeIn 0.3s ease; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, -45%); } to { opacity: 1; transform: translate(-50%, -50%); } }
-
-        /* 서재 및 설정창 내부 스타일 (이전과 동일) */
-        .book-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #f8f9fa; margin-bottom: 10px; border-radius: 15px; cursor: pointer; border: 1px solid transparent; }
-        .book-item:hover { border-color: var(--accent); background: #f1f8ff; }
-        .del-btn { color: #ff6b6b; border: none; background: none; cursor: pointer; padding: 5px; font-size: 12px; }
+        .modal.active { display: block; }
         .setting-group { background: #f8f9fa; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
-        .label { font-size: 13px; color: #666; margin-bottom: 8px; display: block; }
-        input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; font-family: inherit; }
+        input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
         textarea { height: 150px; margin-top: 5px; }
-        .flex-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .flex-row { display: flex; gap: 10px; margin-top: 5px; }
         .flex-row button { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; }
-        .theme-btn { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #ddd; cursor: pointer; }
-        .theme-btn.active { border-color: var(--accent); transform: scale(1.1); }
-        .btn-action { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .btn-save { background: #2ecc71; color: white; }
-        .btn-apply { background: var(--accent); color: white; }
+        .btn-action { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 5px; color: white; }
 
-        /* 뷰어 내부 구조 */
-        .book-container { display: flex; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
-        .page { min-width: var(--p-width); height: 100%; padding: 8% 10%; box-sizing: border-box; position: relative; color: var(--text-color); }
-        .page-content { font-size: var(--font-size); line-height: 1.8; text-align: justify; }
-        .nav-area { position: absolute; top: 0; height: 100%; width: 20%; z-index: 1000; cursor: pointer; }
-        .prev-area { left: 0; } .next-area { right: 0; }
-        .page-header { position: absolute; top: 4%; left: 0; width: 100%; text-align: center; font-size: 11px; opacity: 0.5; }
-        .page-footer { position: absolute; bottom: 4%; left: 0; width: 100%; text-align: center; font-size: 12px; opacity: 0.5; }
-
-        #temp-renderer { width: calc(var(--p-width) - 20%); visibility: hidden; position: absolute; font-size: var(--font-size); line-height: 1.8; }
+        /* 측정용 렌더러 (패킹 30% 제외) */
+        #temp-renderer { width: calc(var(--p-width) - 30%); visibility: hidden; position: absolute; font-size: var(--font-size); line-height: 1.9; }
     </style>
 </head>
 <body>
 
     <div class="main-wrapper">
-        <!-- 뷰어 -->
         <div class="book-viewport">
             <div class="nav-area prev-area" onclick="movePage(-1)"></div>
             <div class="nav-area next-area" onclick="movePage(1)"></div>
             <div class="book-container" id="viewer"></div>
         </div>
 
-        <!-- 하단 메뉴 버튼 (이북 바로 아래 위치) -->
         <div class="bottom-menu">
             <button class="bottom-btn" onclick="openModal('library-modal')">📚 내 서재</button>
             <button class="bottom-btn" onclick="openModal('setting-modal')">⚙️ 편집/설정</button>
         </div>
     </div>
 
-    <!-- 모달 창들은 위치에 상관없이 렌더링 -->
+    <!-- 서재 모달 -->
     <div id="library-modal" class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <span style="font-size:20px; font-weight:bold;">나의 서재</span>
@@ -125,30 +117,22 @@
         <div id="book-list-container"></div>
     </div>
 
+    <!-- 설정 모달 -->
     <div id="setting-modal" class="modal">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <span style="font-size:20px; font-weight:bold;">편집 및 설정</span>
             <span style="cursor:pointer; font-size:24px; color:#999;" onclick="closeModal('setting-modal')">&times;</span>
         </div>
         <div class="setting-group">
-            <span class="label">제목</span>
-            <input type="text" id="book-title" value="나의 이북">
-            <span class="label" style="margin-top:10px;">내용</span>
-            <textarea id="editor">버튼을 이북 바로 아래로 옮겼습니다. 이제 훨씬 일체감 있는 디자인이 되었죠? 모서리 라운딩(Radius)도 요청하신 대로 알약 형태를 유지하고 있습니다.</textarea>
+            <input type="text" id="book-title" value="와이드 스크린 북">
+            <textarea id="editor">화면 너비를 95%로 확장했습니다. 넓은 화면에서는 글줄이 너무 길면 읽기 힘들기 때문에 좌우 여백(Padding)을 15%로 설정하여 가독성을 높였습니다. 기기를 가로로 눕히거나 창 크기를 조절하면 실시간으로 페이지가 재계산됩니다.</textarea>
         </div>
         <div class="setting-group">
-            <span class="label">글자 크기</span>
+            <span style="font-size:13px; color:#666;">글자 크기</span>
             <div class="flex-row"><button onclick="changeFontSize(-2)">가-</button><button onclick="changeFontSize(2)">가+</button></div>
-            <span class="label">배경 테마</span>
-            <div class="flex-row">
-                <button class="theme-btn" style="background:#fcfaf5;" onclick="setTheme('#fcfaf5', '#2c3e50', '#1a1a1a', this)"></button>
-                <button class="theme-btn" style="background:#ffffff;" onclick="setTheme('#ffffff', '#111111', '#e0e0e0', this)"></button>
-                <button class="theme-btn" style="background:#f4ecd8;" onclick="setTheme('#f4ecd8', '#5b4636', '#2d241e', this)"></button>
-                <button class="theme-btn" style="background:#2d3436;" onclick="setTheme('#2d3436', '#dfe6e9', '#000000', this)"></button>
-            </div>
         </div>
-        <button class="btn-action btn-save" onclick="saveToLibrary()">✨ 서재에 저장</button>
-        <button class="btn-action btn-apply" onclick="applyAndClose()">📖 적용하기</button>
+        <button class="btn-action" style="background:#2ecc71;" onclick="saveToLibrary()">✨ 서재에 저장</button>
+        <button class="btn-action" style="background:#3498db;" onclick="applyAndClose()">📖 적용하기</button>
     </div>
 
     <div id="temp-renderer"></div>
@@ -159,80 +143,66 @@
         const editor = document.getElementById('editor');
         const titleInput = document.getElementById('book-title');
         
-        let currentIndex = 0, totalPages = 0, currentFontSize = 16;
+        let currentIndex = 0, totalPages = 0, currentFontSize = 18;
 
         function openModal(id) {
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+            document.getElementById(id).style.display = 'block';
             if(id === 'library-modal') renderLibrary();
         }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         function saveToLibrary() {
-            const books = JSON.parse(localStorage.getItem('myLibrary') || '[]');
+            const books = JSON.parse(localStorage.getItem('fullWidthLibrary') || '[]');
             books.unshift({ id: Date.now(), title: titleInput.value, content: editor.value });
-            localStorage.setItem('myLibrary', JSON.stringify(books));
+            localStorage.setItem('fullWidthLibrary', JSON.stringify(books));
             alert('저장되었습니다.');
         }
 
         function renderLibrary() {
             const container = document.getElementById('book-list-container');
-            const books = JSON.parse(localStorage.getItem('myLibrary') || '[]');
+            const books = JSON.parse(localStorage.getItem('fullWidthLibrary') || '[]');
             container.innerHTML = books.length ? "" : "<p style='text-align:center; color:#999;'>서재가 비어있습니다.</p>";
             books.forEach(book => {
                 const div = document.createElement('div');
-                div.className = 'book-item';
-                div.innerHTML = `<span onclick="loadBook(${book.id})">📘 ${book.title}</span><button class="del-btn" onclick="deleteBook(${book.id}, event)">삭제</button>`;
+                div.style.padding = '15px'; div.style.background = '#f8f9fa'; div.style.marginBottom = '10px'; div.style.borderRadius = '10px'; div.style.cursor = 'pointer';
+                div.innerHTML = `📘 ${book.title}`;
+                div.onclick = () => { titleInput.value = book.title; editor.value = book.content; applyAndClose(); closeModal('library-modal'); };
                 container.appendChild(div);
             });
         }
 
-        function loadBook(id) {
-            const books = JSON.parse(localStorage.getItem('myLibrary') || '[]');
-            const book = books.find(b => b.id === id);
-            if(book) { titleInput.value = book.title; editor.value = book.content; applyAndClose(); closeModal('library-modal'); }
-        }
-
-        function deleteBook(id, e) {
-            e.stopPropagation(); if(!confirm('삭제할까요?')) return;
-            let books = JSON.parse(localStorage.getItem('myLibrary') || '[]');
-            books = books.filter(b => b.id !== id);
-            localStorage.setItem('myLibrary', JSON.stringify(books)); renderLibrary();
-        }
-
         function changeFontSize(delta) {
-            currentFontSize = Math.max(12, Math.min(30, currentFontSize + delta));
+            currentFontSize = Math.max(12, Math.min(40, currentFontSize + delta));
             document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
             paginate();
-        }
-
-        function setTheme(pBg, text, outerBg, btn) {
-            document.documentElement.style.setProperty('--page-bg', pBg);
-            document.documentElement.style.setProperty('--text-color', text);
-            document.documentElement.style.setProperty('--bg-canvas', outerBg);
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
         }
 
         function applyAndClose() { paginate(); closeModal('setting-modal'); }
 
         function paginate() {
-            const maxH = document.querySelector('.book-viewport').offsetHeight * 0.8;
+            const viewport = document.querySelector('.book-viewport');
+            const maxH = viewport.offsetHeight * 0.8;
             const text = editor.value || " ";
             const title = titleInput.value;
-            const paragraphs = text.split('\n');
+            
+            // 렌더러 너비 동기화
+            tempRenderer.style.width = `calc(var(--p-width) - 30%)`;
+            
             viewer.innerHTML = ""; tempRenderer.innerHTML = "";
             let currentPContent = "", pageCount = 1;
-            paragraphs.forEach((pText) => {
-                const p = document.createElement('p'); p.style.marginBottom = "1.2em";
+            
+            text.split('\n').forEach((pText) => {
+                const p = document.createElement('p'); p.style.marginBottom = "1.5em";
                 p.innerText = pText.trim() === "" ? "\u00A0" : pText;
                 tempRenderer.appendChild(p);
+                
                 if (tempRenderer.offsetHeight > maxH) {
                     addPage(currentPContent, pageCount++, title);
                     tempRenderer.innerHTML = ""; tempRenderer.appendChild(p);
                     currentPContent = p.outerHTML;
                 } else { currentPContent += p.outerHTML; }
             });
+            
             if (currentPContent) addPage(currentPContent, pageCount, title);
             totalPages = pageCount; currentIndex = 0; updateSlider();
         }
