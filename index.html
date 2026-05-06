@@ -94,7 +94,6 @@
         .theme-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 15px 0; }
         .theme-item { height: 40px; border-radius: 10px; border: 2px solid #eee; cursor: pointer; }
 
-        /* 입력창 스타일 수정: box-sizing 추가 */
         textarea { 
             width: 100%; 
             box-sizing: border-box; 
@@ -109,7 +108,6 @@
             display: block;
         }
         
-        /* 인풋박스 스타일 수정: box-sizing 추가 */
         input[type="text"] {
             width: 100%;
             box-sizing: border-box;
@@ -131,7 +129,6 @@
         .list-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .list-main { cursor: pointer; flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
         .list-title { font-weight: bold; color: #2c3e50; }
-        .list-page-tag { font-size: 11px; color: #3498db; background: #ebf5ff; padding: 2px 6px; border-radius: 4px; width: fit-content; }
         .delete-btn { color: #e74c3c; border: 1px solid #e74c3c; background: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 
         .book-highlight { color: color-mix(in srgb, #3498db, var(--text-color) 30%); }
@@ -161,8 +158,6 @@
         <div class="bottom-menu">
             <button class="bottom-btn" onclick="openLibrary()">📚 내 서재</button>
             <button class="bottom-btn" onclick="openEditorModal()">🎨 테마/편집</button>
-            <button class="bottom-btn" onclick="saveBookmark()" style="background: #f1c40f; color: #2c3e50; border: none;">📍 북마크</button>
-            <button class="bottom-btn" onclick="openBookmarkList()">🔖 북마크 리스트</button>
         </div>
     </div>
 
@@ -194,12 +189,6 @@
         <h3>📚 내 서재</h3>
         <div id="book-list-container">로드 중...</div>
         <button class="btn-action" style="background:#95a5a6; margin-top:15px;" onclick="closeModal('library-modal')">닫기</button>
-    </div>
-
-    <div id="bookmark-list-modal" class="modal">
-        <h3>🔖 저장된 북마크</h3>
-        <div id="bookmark-container">로드 중...</div>
-        <button class="btn-action" style="background:#95a5a6; margin-top:15px;" onclick="closeModal('bookmark-list-modal')">닫기</button>
     </div>
 
     <div id="temp-measurer"></div>
@@ -268,15 +257,11 @@
             const { error } = await _supabase.from('ebooks').delete().eq('id', id);
             if (!error) {
                 alert('삭제되었습니다.');
+                // 삭제 시 로컬 스토리지 정보도 삭제
+                localStorage.removeItem(`last_page_${id}`);
                 if (document.getElementById('library-modal').style.display === 'block') openLibrary();
                 if (currentBookId === id) { currentBookId = null; editor.value = ""; titleInput.value = ""; renderBook(); }
             }
-        }
-
-        async function saveBookmark() {
-            if (!currentBookId) return alert('책을 먼저 불러와주세요.');
-            const { error } = await _supabase.from('ebooks').update({ last_page: currentIndex }).eq('id', currentBookId);
-            if (!error) alert(`현재 ${currentIndex + 1}페이지를 저장했습니다.`);
         }
 
         async function openLibrary() {
@@ -295,34 +280,23 @@
             `).join('');
         }
 
-        async function openBookmarkList() {
-            openModal('bookmark-list-modal');
-            const container = document.getElementById('bookmark-container');
-            container.innerHTML = '로드 중...';
-            const { data } = await _supabase.from('ebooks').select('id, title, last_page').gt('last_page', -1).order('updated_at', { ascending: false });
-            if (!data || data.length === 0) { container.innerHTML = '북마크가 없습니다.'; return; }
-            container.innerHTML = data.map(b => `
-                <div class="list-item">
-                    <div class="list-main" onclick="loadBook('${b.id}', ${b.last_page})">
-                        <span class="list-title">${b.title}</span>
-                        <span class="list-page-tag">${b.last_page + 1} 페이지</span>
-                    </div>
-                    <button class="delete-btn" onclick="deleteBook('${b.id}', event)">삭제</button>
-                </div>
-            `).join('');
-        }
-
-        async function loadBook(id, targetPage = 0) {
+        async function loadBook(id) {
             const { data } = await _supabase.from('ebooks').select('*').eq('id', id).single();
             if (data) {
                 currentBookId = data.id;
                 titleInput.value = data.title;
                 editor.value = data.content;
                 await renderBook();
-                currentIndex = (targetPage < totalPages) ? targetPage : 0;
+                
+                // 로컬 스토리지에서 마지막 읽은 페이지 불러오기
+                const savedPage = localStorage.getItem(`last_page_${id}`);
+                currentIndex = savedPage ? parseInt(savedPage) : 0;
+                
+                // 불러온 페이지가 총 페이지를 넘지 않도록 방어 코드
+                if (currentIndex >= totalPages) currentIndex = 0;
+
                 updateSlider();
                 closeModal('library-modal');
-                closeModal('bookmark-list-modal');
             }
         }
 
@@ -377,6 +351,11 @@
             const w = document.querySelector('.book-viewport').offsetWidth;
             viewerContainer.style.transform = `translateX(${-currentIndex * w}px)`;
             pageIndicator.innerText = `${currentIndex + 1} / ${totalPages}`;
+            
+            // 페이지 이동 시마다 로컬 스토리지에 자동 저장
+            if (currentBookId) {
+                localStorage.setItem(`last_page_${currentBookId}`, currentIndex);
+            }
         }
 
         function movePage(dir) {
