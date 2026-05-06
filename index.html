@@ -3,229 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>풀스크린 와이드 이북</title>
+    <title>eBook</title>
     <style>
         :root {
-            /* 너비를 화면의 95%로 확장 */
-            --p-width: 95vw; 
+            --p-width: 95vw;
             --p-height: 85vh;
             --bg-canvas: #1a1a1a;
             --page-bg: #fcfaf5;
             --text-color: #2c3e50;
-            --font-size: 18px; /* 넓은 화면에 맞춰 기본 폰트 크기 상향 */
-            --accent: #3498db;
+            --font-size: 19px;
+            --line-color: color-mix(in srgb, var(--text-color), transparent 85%);
         }
 
         body { 
             background: var(--bg-canvas); 
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             height: 100vh; margin: 0; font-family: 'Pretendard', sans-serif;
-            overflow: hidden; transition: background 0.3s;
+            overflow: hidden; transition: background 0.4s ease;
         }
 
-        .main-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            width: 100%;
-        }
+        .main-wrapper { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; }
 
-        /* 뷰어: 좌우를 꽉 채우는 스타일 */
         .book-viewport {
             width: var(--p-width); height: var(--p-height);
-            position: relative; overflow: hidden; border-radius: 10px; 
+            position: relative; overflow: hidden; border-radius: 20px; 
             box-shadow: 0 40px 100px rgba(0,0,0,0.6); 
-            background: var(--page-bg); transition: 0.3s;
+            background: var(--page-bg); transition: background 0.4s ease;
         }
 
-        .book-container { display: flex; height: 100%; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        .book-container { display: flex; height: 100%; transition: transform 0.4s ease; }
         
         .page { 
-            min-width: var(--p-width); 
-            height: 100%; 
-            /* 화면이 넓으므로 좌우 여백을 15%로 늘려 가독성 확보 */
-            padding: 5% 5%; 
+            min-width: var(--p-width); height: 100%; 
+            padding: 8.5vh 10vw 6vh 10vw; 
             box-sizing: border-box; 
-            position: relative; 
-            color: var(--text-color); 
+            position: relative; color: var(--text-color); transition: color 0.4s ease;
         }
 
         .page-content { 
             font-size: var(--font-size); 
-            line-height: 1.9; 
+            line-height: 1.8; 
             text-align: justify; 
             word-break: break-all;
+            white-space: pre-wrap;
         }
 
-        /* 하단 메뉴 */
-        .bottom-menu { display: flex; gap: 15px; justify-content: center; width: 100%; }
-        .bottom-btn { 
-            padding: 12px 24px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.15);
-            background: rgba(255,255,255,0.1); color: white; backdrop-filter: blur(8px);
-            cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s;
+        /* 본문 내 이미지 스타일 */
+        .page-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px 0;
+            border-radius: 8px;
         }
-        .bottom-btn:hover { background: rgba(255,255,255,0.2); }
 
-        /* 네비게이션 영역 */
-        .nav-area { position: absolute; top: 0; height: 100%; width: 15%; z-index: 1000; cursor: pointer; }
+        .book-info { 
+            position: absolute; width: 80%; left: 10%; 
+            opacity: 0.7; font-size: 13px; z-index: 100;
+            color: var(--text-color); transition: all 0.4s ease;
+        }
+        
+        .book-header { 
+            top: 3vh; padding-bottom: 8px; 
+            border-bottom: 1.5px solid var(--line-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .book-footer { 
+            bottom: 2.5vh; padding-top: 8px; 
+            border-top: 1.5px solid var(--line-color);
+            text-align: center;
+        }
+
+        .font-controls { display: flex; gap: 10px; pointer-events: auto; }
+        .font-btn {
+            background: none; border: 1px solid var(--line-color);
+            color: var(--text-color); cursor: pointer; border-radius: 4px;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: bold; transition: 0.2s;
+        }
+        .font-btn:hover { background: var(--line-color); }
+
+        .nav-area { position: absolute; top: 0; height: 100%; width: 15%; z-index: 50; cursor: pointer; }
         .prev-area { left: 0; } .next-area { right: 0; }
 
-        .page-header { position: absolute; top: 3%; left: 0; width: 100%; text-align: center; font-size: 12px; opacity: 0.5; }
-        .page-footer { position: absolute; bottom: 3%; left: 0; width: 100%; text-align: center; font-size: 13px; opacity: 0.5; }
-
-        /* 모달 스타일 */
-        .modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: min(600px, 90%); max-height: 80vh; background: white;
-            padding: 30px; border-radius: 25px; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
-            z-index: 3000; overflow-y: auto; color: #333; display: none;
+        .bottom-menu { display: flex; gap: 12px; justify-content: center; width: 100%; }
+        .bottom-btn { 
+            padding: 12px 24px; border-radius: 50px; background: rgba(255,255,255,0.1); 
+            color: white; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; font-weight: bold;
         }
-        .modal.active { display: block; }
-        .setting-group { background: #f8f9fa; padding: 15px; border-radius: 15px; margin-bottom: 15px; }
-        input[type="text"], textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd; box-sizing: border-box; }
-        textarea { height: 150px; margin-top: 5px; }
-        .flex-row { display: flex; gap: 10px; margin-top: 5px; }
-        .flex-row button { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; }
-        .btn-action { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 5px; color: white; }
 
-        /* 측정용 렌더러 (패킹 30% 제외) */
-        #temp-renderer { width: calc(var(--p-width) - 30%); visibility: hidden; position: absolute; font-size: var(--font-size); line-height: 1.9; }
+        .modal { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            width: min(700px, 90%); max-height: 85vh; background: white; padding: 25px; 
+            border-radius: 25px; z-index: 3000; display: none; color: #333; overflow-y: auto;
+        }
+        
+        .theme-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 15px 0; }
+        .theme-item { height: 45px; border-radius: 10px; border: 2px solid #eee; cursor: pointer; transition: 0.2s; }
+
+        /* 에디터에서 이미지 태그 구분을 위해 높이 조절 */
+        textarea { width: 100%; height: 250px; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-family: inherit; margin-top: 10px; line-height: 1.5; }
+        .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+
+        #temp-measurer {
+            width: calc(var(--p-width) - 20vw); font-size: var(--font-size);
+            line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all;
+        }
+        #temp-measurer img { max-width: 100%; height: auto; display: block; }
     </style>
 </head>
 <body>
 
     <div class="main-wrapper">
         <div class="book-viewport">
+            <div class="book-info book-header">
+                <span id="display-title">나만의 이미지 이북</span>
+                <div class="font-controls">
+                    <button class="font-btn" onclick="changeFontSize(-1)">-</button>
+                    <button class="font-btn" onclick="changeFontSize(1)">+</button>
+                </div>
+            </div>
+
             <div class="nav-area prev-area" onclick="movePage(-1)"></div>
             <div class="nav-area next-area" onclick="movePage(1)"></div>
-            <div class="book-container" id="viewer"></div>
+            
+            <div id="viewer-container" class="book-container"></div>
+
+            <div class="book-info book-footer" id="page-indicator">1 / 1</div>
         </div>
 
         <div class="bottom-menu">
             <button class="bottom-btn" onclick="openModal('library-modal')">📚 내 서재</button>
-            <button class="bottom-btn" onclick="openModal('setting-modal')">⚙️ 편집/설정</button>
+            <button class="bottom-btn" onclick="openModal('setting-modal')">🎨 테마/편집</button>
         </div>
     </div>
 
-    <!-- 서재 모달 -->
-    <div id="library-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <span style="font-size:20px; font-weight:bold;">나의 서재</span>
-            <span style="cursor:pointer; font-size:24px; color:#999;" onclick="closeModal('library-modal')">&times;</span>
-        </div>
-        <div id="book-list-container"></div>
-    </div>
-
-    <!-- 설정 모달 -->
+    <!-- 설정/테마 모달 -->
     <div id="setting-modal" class="modal">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <span style="font-size:20px; font-weight:bold;">편집 및 설정</span>
-            <span style="cursor:pointer; font-size:24px; color:#999;" onclick="closeModal('setting-modal')">&times;</span>
+        <h3 style="margin-top:0">🎨 도서 편집 및 이미지 삽입</h3>
+        <p style="font-size:12px; color:#e74c3c;">* 본문에 이미지를 붙여넣으려면 에디터에 커서를 두고 Ctrl+V 하세요.</p>
+        <div class="theme-grid">
+            <div class="theme-item" style="background:#fcfaf5;" onclick="setTheme('#fcfaf5', '#2c3e50', '#1a1a1a')"></div>
+            <div class="theme-item" style="background:#ffffff;" onclick="setTheme('#ffffff', '#111111', '#f0f0f0')"></div>
+            <div class="theme-item" style="background:#f4ecd8;" onclick="setTheme('#f4ecd8', '#5b4636', '#2d241e')"></div>
+            <div class="theme-item" style="background:#e8f4ea;" onclick="setTheme('#e8f4ea', '#1e3a24', '#0d1a11')"></div>
+            <div class="theme-item" style="background:#eef2f7;" onclick="setTheme('#eef2f7', '#223344', '#10151c')"></div>
+            <div class="theme-item" style="background:#353b48;" onclick="setTheme('#353b48', '#f5f6fa', '#1e2124')"></div>
+            <div class="theme-item" style="background:#2d3436;" onclick="setTheme('#2d3436', '#dfe6e9', '#000000')"></div>
+            <div class="theme-item" style="background:#1e1e1e;" onclick="setTheme('#1e1e1e', '#bbbbbb', '#0a0a0a')"></div>
+            <div class="theme-item" style="background:#000000;" onclick="setTheme('#000000', '#ffffff', '#1a1a1a')"></div>
+            <div class="theme-item" style="background:#2c3e50;" onclick="setTheme('#2c3e50', '#ecf0f1', '#141e26')"></div>
         </div>
-        <div class="setting-group">
-            <input type="text" id="book-title" value="와이드 스크린 북">
-            <textarea id="editor">화면 너비를 95%로 확장했습니다. 넓은 화면에서는 글줄이 너무 길면 읽기 힘들기 때문에 좌우 여백(Padding)을 15%로 설정하여 가독성을 높였습니다. 기기를 가로로 눕히거나 창 크기를 조절하면 실시간으로 페이지가 재계산됩니다.</textarea>
-        </div>
-        <div class="setting-group">
-            <span style="font-size:13px; color:#666;">글자 크기</span>
-            <div class="flex-row"><button onclick="changeFontSize(-2)">가-</button><button onclick="changeFontSize(2)">가+</button></div>
-        </div>
-        <button class="btn-action" style="background:#2ecc71;" onclick="saveToLibrary()">✨ 서재에 저장</button>
-        <button class="btn-action" style="background:#3498db;" onclick="applyAndClose()">📖 적용하기</button>
+        <input type="text" id="book-title" value="이미지 지원 이북" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
+        <textarea id="editor" placeholder="여기에 텍스트를 입력하거나 이미지를 붙여넣으세요. 이미지 주소를 <img> 태그 형식으로 넣어도 됩니다."></textarea>
+        <button class="btn-action" onclick="applyAndClose()">📖 저장 및 적용</button>
     </div>
 
-    <div id="temp-renderer"></div>
+    <div id="library-modal" class="modal">
+        <h3>📚 내 서재</h3>
+        <div id="book-list-container"></div>
+        <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('library-modal')">닫기</button>
+    </div>
+
+    <div id="temp-measurer"></div>
 
     <script>
-        const viewer = document.getElementById('viewer');
-        const tempRenderer = document.getElementById('temp-renderer');
+        const viewerContainer = document.getElementById('viewer-container');
+        const tempMeasurer = document.getElementById('temp-measurer');
         const editor = document.getElementById('editor');
         const titleInput = document.getElementById('book-title');
+        const pageIndicator = document.getElementById('page-indicator');
         
-        let currentIndex = 0, totalPages = 0, currentFontSize = 18;
+        let currentIndex = 0;
+        let totalPages = 1;
+        let currentFontSize = 19;
 
-        function openModal(id) {
-            document.getElementById(id).style.display = 'block';
-            if(id === 'library-modal') renderLibrary();
-        }
+        // 이미지 붙여넣기 이벤트 처리
+        editor.addEventListener('paste', function (e) {
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file') {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const imgTag = `\n<img src="${event.target.result}">\n`;
+                        const start = editor.selectionStart;
+                        const end = editor.selectionEnd;
+                        editor.value = editor.value.substring(0, start) + imgTag + editor.value.substring(end);
+                    };
+                    reader.readAsDataURL(blob);
+                }
+            }
+        });
+
+        function openModal(id) { document.getElementById(id).style.display = 'block'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        function saveToLibrary() {
-            const books = JSON.parse(localStorage.getItem('fullWidthLibrary') || '[]');
-            books.unshift({ id: Date.now(), title: titleInput.value, content: editor.value });
-            localStorage.setItem('fullWidthLibrary', JSON.stringify(books));
-            alert('저장되었습니다.');
-        }
-
-        function renderLibrary() {
-            const container = document.getElementById('book-list-container');
-            const books = JSON.parse(localStorage.getItem('fullWidthLibrary') || '[]');
-            container.innerHTML = books.length ? "" : "<p style='text-align:center; color:#999;'>서재가 비어있습니다.</p>";
-            books.forEach(book => {
-                const div = document.createElement('div');
-                div.style.padding = '15px'; div.style.background = '#f8f9fa'; div.style.marginBottom = '10px'; div.style.borderRadius = '10px'; div.style.cursor = 'pointer';
-                div.innerHTML = `📘 ${book.title}`;
-                div.onclick = () => { titleInput.value = book.title; editor.value = book.content; applyAndClose(); closeModal('library-modal'); };
-                container.appendChild(div);
-            });
+        function setTheme(pBg, text, outerBg) {
+            document.documentElement.style.setProperty('--page-bg', pBg);
+            document.documentElement.style.setProperty('--text-color', text);
+            document.documentElement.style.setProperty('--bg-canvas', outerBg);
         }
 
         function changeFontSize(delta) {
             currentFontSize = Math.max(12, Math.min(40, currentFontSize + delta));
             document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-            paginate();
+            renderBook();
         }
 
-        function applyAndClose() { paginate(); closeModal('setting-modal'); }
+        function applyAndClose() { renderBook(); closeModal('setting-modal'); }
 
-        function paginate() {
-            const viewport = document.querySelector('.book-viewport');
-            const maxH = viewport.offsetHeight * 0.8;
-            const text = editor.value || " ";
-            const title = titleInput.value;
+        // 텍스트와 이미지 태그를 분리하여 처리하는 렌더링 로직
+        async function renderBook() {
+            const rawContent = editor.value || "";
+            const viewportH = document.querySelector('.book-viewport').offsetHeight;
+            const maxH = viewportH * 0.77; 
             
-            // 렌더러 너비 동기화
-            tempRenderer.style.width = `calc(var(--p-width) - 30%)`;
+            viewerContainer.innerHTML = "";
+            tempMeasurer.innerHTML = "";
             
-            viewer.innerHTML = ""; tempRenderer.innerHTML = "";
-            let currentPContent = "", pageCount = 1;
+            // 이미지 태그와 텍스트를 분리 (정규표현식 사용)
+            const parts = rawContent.split(/(<img[^>]*>)/g);
+            let currentPageHTML = "";
+            let pageNum = 1;
+
+            for (let part of parts) {
+                if (part.startsWith('<img')) {
+                    // 이미지인 경우
+                    tempMeasurer.innerHTML = currentPageHTML + part;
+                    // 이미지가 로드된 후 높이를 재측정해야 하므로 약간의 지연 필요할 수 있으나 
+                    // base64의 경우 즉시 측정 가능. 외부 링크를 위해 대기 로직 추가 가능.
+                    if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
+                        addPageToViewer(currentPageHTML, pageNum++);
+                        currentPageHTML = part;
+                    } else {
+                        currentPageHTML += part;
+                    }
+                } else {
+                    // 텍스트인 경우 (단어 단위로 쪼갬)
+                    const words = part.split(/(\s+)/);
+                    for (let word of words) {
+                        const testContent = currentPageHTML + word;
+                        tempMeasurer.innerHTML = testContent;
+                        
+                        if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
+                            addPageToViewer(currentPageHTML, pageNum++);
+                            currentPageHTML = word;
+                            tempMeasurer.innerHTML = word;
+                        } else {
+                            currentPageHTML = testContent;
+                        }
+                    }
+                }
+            }
             
-            text.split('\n').forEach((pText) => {
-                const p = document.createElement('p'); p.style.marginBottom = "1.5em";
-                p.innerText = pText.trim() === "" ? "\u00A0" : pText;
-                tempRenderer.appendChild(p);
-                
-                if (tempRenderer.offsetHeight > maxH) {
-                    addPage(currentPContent, pageCount++, title);
-                    tempRenderer.innerHTML = ""; tempRenderer.appendChild(p);
-                    currentPContent = p.outerHTML;
-                } else { currentPContent += p.outerHTML; }
-            });
-            
-            if (currentPContent) addPage(currentPContent, pageCount, title);
-            totalPages = pageCount; currentIndex = 0; updateSlider();
+            if (currentPageHTML.trim() !== "") {
+                addPageToViewer(currentPageHTML, pageNum);
+            }
+
+            totalPages = pageNum || 1;
+            currentIndex = Math.min(currentIndex, totalPages - 1);
+            updateSlider();
+            document.getElementById('display-title').innerText = titleInput.value;
         }
 
-        function addPage(content, num, title) {
+        function addPageToViewer(content, num) {
             const pageDiv = document.createElement('div');
             pageDiv.className = 'page';
-            pageDiv.innerHTML = `<div class="page-header">${title}</div><div class="page-content">${content}</div><div class="page-footer">${num}</div>`;
-            viewer.appendChild(pageDiv);
+            pageDiv.innerHTML = `<div class="page-content">${content}</div>`;
+            viewerContainer.appendChild(pageDiv);
         }
 
         function movePage(dir) {
             const newIdx = currentIndex + dir;
-            if (newIdx >= 0 && newIdx < totalPages) { currentIndex = newIdx; updateSlider(); }
+            if (newIdx >= 0 && newIdx < totalPages) {
+                currentIndex = newIdx;
+                updateSlider();
+            }
         }
 
         function updateSlider() {
             const w = document.querySelector('.book-viewport').offsetWidth;
-            viewer.style.transform = `translateX(${-currentIndex * w}px)`;
+            viewerContainer.style.transform = `translateX(${-currentIndex * w}px)`;
+            pageIndicator.innerText = `${currentIndex + 1} / ${totalPages}`;
         }
 
-        window.addEventListener('resize', paginate);
-        paginate();
+        window.addEventListener('resize', renderBook);
+        
+        // 초기 예시
+        editor.value = "이미지를 문장 사이에 삽입하는 방법:\n1. 텍스트를 입력합니다.\n2. 이미지를 복사(Ctrl+C)합니다.\n3. 에디터에서 원하는 위치에 붙여넣기(Ctrl+V) 하세요.\n\n그러면 아래와 같이 이미지 태그가 생기며 렌더링 시 이미지로 나타납니다.";
+        renderBook();
     </script>
 </body>
 </html>
