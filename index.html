@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>eBook</title>
+    <title>Supabase 연동 이미지 이북</title>
+    <!-- Supabase JS 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* (기존 스타일 유지) */
         :root {
             --p-width: 95vw;
             --p-height: 85vh;
@@ -48,7 +51,6 @@
             white-space: pre-wrap;
         }
 
-        /* 본문 내 이미지 스타일 */
         .page-content img {
             max-width: 100%;
             height: auto;
@@ -102,7 +104,6 @@
         .theme-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 15px 0; }
         .theme-item { height: 45px; border-radius: 10px; border: 2px solid #eee; cursor: pointer; transition: 0.2s; }
 
-        /* 에디터에서 이미지 태그 구분을 위해 높이 조절 */
         textarea { width: 100%; height: 250px; padding: 12px; border-radius: 10px; border: 1px solid #ddd; font-family: inherit; margin-top: 10px; line-height: 1.5; }
         .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 15px; }
 
@@ -111,6 +112,17 @@
             line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all;
         }
         #temp-measurer img { max-width: 100%; height: auto; display: block; }
+        
+        /* 서재 아이템 스타일 */
+        .book-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .book-item:hover { background: #f9f9f9; }
+        .load-btn { cursor: pointer; color: #3498db; font-weight: bold; border: none; background: none; }
     </style>
 </head>
 <body>
@@ -118,7 +130,7 @@
     <div class="main-wrapper">
         <div class="book-viewport">
             <div class="book-info book-header">
-                <span id="display-title">나만의 이미지 이북</span>
+                <span id="display-title">Supabase 이북</span>
                 <div class="font-controls">
                     <button class="font-btn" onclick="changeFontSize(-1)">-</button>
                     <button class="font-btn" onclick="changeFontSize(1)">+</button>
@@ -134,41 +146,42 @@
         </div>
 
         <div class="bottom-menu">
-            <button class="bottom-btn" onclick="openModal('library-modal')">📚 내 서재</button>
+            <button class="bottom-btn" onclick="openLibrary()">📚 내 서재</button>
             <button class="bottom-btn" onclick="openModal('setting-modal')">🎨 테마/편집</button>
         </div>
     </div>
 
     <!-- 설정/테마 모달 -->
     <div id="setting-modal" class="modal">
-        <h3 style="margin-top:0">🎨 도서 편집 및 이미지 삽입</h3>
-        <p style="font-size:12px; color:#e74c3c;">* 본문에 이미지를 붙여넣으려면 에디터에 커서를 두고 Ctrl+V 하세요.</p>
-        <div class="theme-grid">
+        <h3 style="margin-top:0">🎨 도서 편집 (Supabase 저장)</h3>
+        <div class="theme-grid" id="theme-grid">
             <div class="theme-item" style="background:#fcfaf5;" onclick="setTheme('#fcfaf5', '#2c3e50', '#1a1a1a')"></div>
             <div class="theme-item" style="background:#ffffff;" onclick="setTheme('#ffffff', '#111111', '#f0f0f0')"></div>
             <div class="theme-item" style="background:#f4ecd8;" onclick="setTheme('#f4ecd8', '#5b4636', '#2d241e')"></div>
             <div class="theme-item" style="background:#e8f4ea;" onclick="setTheme('#e8f4ea', '#1e3a24', '#0d1a11')"></div>
-            <div class="theme-item" style="background:#eef2f7;" onclick="setTheme('#eef2f7', '#223344', '#10151c')"></div>
-            <div class="theme-item" style="background:#353b48;" onclick="setTheme('#353b48', '#f5f6fa', '#1e2124')"></div>
             <div class="theme-item" style="background:#2d3436;" onclick="setTheme('#2d3436', '#dfe6e9', '#000000')"></div>
-            <div class="theme-item" style="background:#1e1e1e;" onclick="setTheme('#1e1e1e', '#bbbbbb', '#0a0a0a')"></div>
-            <div class="theme-item" style="background:#000000;" onclick="setTheme('#000000', '#ffffff', '#1a1a1a')"></div>
-            <div class="theme-item" style="background:#2c3e50;" onclick="setTheme('#2c3e50', '#ecf0f1', '#141e26')"></div>
         </div>
-        <input type="text" id="book-title" value="이미지 지원 이북" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
-        <textarea id="editor" placeholder="여기에 텍스트를 입력하거나 이미지를 붙여넣으세요. 이미지 주소를 <img> 태그 형식으로 넣어도 됩니다."></textarea>
-        <button class="btn-action" onclick="applyAndClose()">📖 저장 및 적용</button>
+        <input type="text" id="book-title" value="제목 없는 이북" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; box-sizing:border-box;">
+        <textarea id="editor" placeholder="내용을 입력하고 저장하세요."></textarea>
+        <button class="btn-action" onclick="saveToSupabase()">💾 Supabase에 저장</button>
+        <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">취소</button>
     </div>
 
+    <!-- 서재 모달 -->
     <div id="library-modal" class="modal">
-        <h3>📚 내 서재</h3>
-        <div id="book-list-container"></div>
-        <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('library-modal')">닫기</button>
+        <h3>📚 저장된 이북 목록</h3>
+        <div id="book-list-container">불러오는 중...</div>
+        <button class="btn-action" style="background:#95a5a6; margin-top:20px;" onclick="closeModal('library-modal')">닫기</button>
     </div>
 
     <div id="temp-measurer"></div>
 
     <script>
+        // --- Supabase 초기화 ---
+        const SUPABASE_URL = 'https://bmdlawnmwkotxvoieuce.supabase.co'; // 여기에 URL 입력
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZGxhd25td2tvdHh2b2lldWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMzg3NjgsImV4cCI6MjA5MzYxNDc2OH0.P3H0Gob_HFjCtz12b_KGEyC-tCWHijEyH-9SHPKAVDM'; // 여기에 KEY 입력
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         const viewerContainer = document.getElementById('viewer-container');
         const tempMeasurer = document.getElementById('temp-measurer');
         const editor = document.getElementById('editor');
@@ -179,7 +192,7 @@
         let totalPages = 1;
         let currentFontSize = 19;
 
-        // 이미지 붙여넣기 이벤트 처리
+        // 이미지 붙여넣기 기능
         editor.addEventListener('paste', function (e) {
             const items = (e.clipboardData || e.originalEvent.clipboardData).items;
             for (let index in items) {
@@ -198,6 +211,68 @@
             }
         });
 
+        // --- Supabase 함수 ---
+        async function saveToSupabase() {
+            const title = titleInput.value;
+            const content = editor.value;
+
+            const { data, error } = await _supabase
+                .from('ebooks')
+                .insert([{ title, content }]);
+
+            if (error) {
+                alert('저장 실패: ' + error.message);
+            } else {
+                alert('Supabase에 성공적으로 저장되었습니다!');
+                renderBook();
+                closeModal('setting-modal');
+            }
+        }
+
+        async function openLibrary() {
+            openModal('library-modal');
+            const container = document.getElementById('book-list-container');
+            container.innerHTML = '불러오는 중...';
+
+            const { data, error } = await _supabase
+                .from('ebooks')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                container.innerHTML = '목록 로드 실패';
+                return;
+            }
+
+            container.innerHTML = '';
+            data.forEach(book => {
+                const item = document.createElement('div');
+                item.className = 'book-item';
+                item.innerHTML = `
+                    <span>${book.title}</span>
+                    <button class="load-btn" onclick="loadBook('${book.id}')">불러오기</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        async function loadBook(id) {
+            const { data, error } = await _supabase
+                .from('ebooks')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (data) {
+                titleInput.value = data.title;
+                editor.value = data.content;
+                renderBook();
+                closeModal('library-modal');
+                alert('불러오기 완료!');
+            }
+        }
+
+        // --- 기존 UI 제어 함수 ---
         function openModal(id) { document.getElementById(id).style.display = 'block'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
@@ -213,9 +288,6 @@
             renderBook();
         }
 
-        function applyAndClose() { renderBook(); closeModal('setting-modal'); }
-
-        // 텍스트와 이미지 태그를 분리하여 처리하는 렌더링 로직
         async function renderBook() {
             const rawContent = editor.value || "";
             const viewportH = document.querySelector('.book-viewport').offsetHeight;
@@ -224,17 +296,13 @@
             viewerContainer.innerHTML = "";
             tempMeasurer.innerHTML = "";
             
-            // 이미지 태그와 텍스트를 분리 (정규표현식 사용)
             const parts = rawContent.split(/(<img[^>]*>)/g);
             let currentPageHTML = "";
             let pageNum = 1;
 
             for (let part of parts) {
                 if (part.startsWith('<img')) {
-                    // 이미지인 경우
                     tempMeasurer.innerHTML = currentPageHTML + part;
-                    // 이미지가 로드된 후 높이를 재측정해야 하므로 약간의 지연 필요할 수 있으나 
-                    // base64의 경우 즉시 측정 가능. 외부 링크를 위해 대기 로직 추가 가능.
                     if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
                         addPageToViewer(currentPageHTML, pageNum++);
                         currentPageHTML = part;
@@ -242,12 +310,10 @@
                         currentPageHTML += part;
                     }
                 } else {
-                    // 텍스트인 경우 (단어 단위로 쪼갬)
                     const words = part.split(/(\s+)/);
                     for (let word of words) {
                         const testContent = currentPageHTML + word;
                         tempMeasurer.innerHTML = testContent;
-                        
                         if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
                             addPageToViewer(currentPageHTML, pageNum++);
                             currentPageHTML = word;
@@ -258,13 +324,9 @@
                     }
                 }
             }
-            
-            if (currentPageHTML.trim() !== "") {
-                addPageToViewer(currentPageHTML, pageNum);
-            }
-
+            if (currentPageHTML.trim() !== "") addPageToViewer(currentPageHTML, pageNum);
             totalPages = pageNum || 1;
-            currentIndex = Math.min(currentIndex, totalPages - 1);
+            currentIndex = 0;
             updateSlider();
             document.getElementById('display-title').innerText = titleInput.value;
         }
@@ -291,9 +353,6 @@
         }
 
         window.addEventListener('resize', renderBook);
-        
-        // 초기 예시
-        editor.value = "이미지를 문장 사이에 삽입하는 방법:\n1. 텍스트를 입력합니다.\n2. 이미지를 복사(Ctrl+C)합니다.\n3. 에디터에서 원하는 위치에 붙여넣기(Ctrl+V) 하세요.\n\n그러면 아래와 같이 이미지 태그가 생기며 렌더링 시 이미지로 나타납니다.";
         renderBook();
     </script>
 </body>
