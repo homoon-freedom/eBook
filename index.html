@@ -280,25 +280,65 @@
             `).join('');
         }
 
-        async function loadBook(id) {
-            const { data } = await _supabase.from('ebooks').select('*').eq('id', id).single();
-            if (data) {
-                currentBookId = data.id;
-                titleInput.value = data.title;
-                editor.value = data.content;
-                await renderBook();
-                
-                // 로컬 스토리지에서 마지막 읽은 페이지 불러오기
-                const savedPage = localStorage.getItem(`last_page_${id}`);
-                currentIndex = savedPage ? parseInt(savedPage) : 0;
-                
-                // 불러온 페이지가 총 페이지를 넘지 않도록 방어 코드
-                if (currentIndex >= totalPages) currentIndex = 0;
+        // ... 기존 변수 선언부 동일 ...
 
-                updateSlider();
-                closeModal('library-modal');
-            }
-        }
+async function loadBook(id) {
+    const { data } = await _supabase.from('ebooks').select('*').eq('id', id).single();
+    if (data) {
+        currentBookId = data.id;
+        titleInput.value = data.title;
+        editor.value = data.content;
+        
+        // 1. 마지막 읽은 책 ID 저장
+        localStorage.setItem('last_read_book_id', id);
+
+        // 2. 책 렌더링 (페이지 분할 계산 완료까지 대기)
+        await renderBook();
+        
+        // 3. 로컬 스토리지에서 해당 도서의 마지막 페이지 불러오기
+        const savedPage = localStorage.getItem(`last_page_${id}`);
+        currentIndex = savedPage ? parseInt(savedPage) : 0;
+        
+        // 4. 페이지 범위 방어 코드
+        if (currentIndex >= totalPages) currentIndex = 0;
+
+        updateSlider();
+        closeModal('library-modal');
+    }
+}
+
+// 페이지 이동 시 저장하는 부분 (기존 updateSlider 유지/확인)
+function updateSlider() {
+    const w = document.querySelector('.book-viewport').offsetWidth;
+    viewerContainer.style.transform = `translateX(${-currentIndex * w}px)`;
+    pageIndicator.innerText = `${currentIndex + 1} / ${totalPages}`;
+    
+    if (currentBookId) {
+        // 현재 책의 현재 페이지 번호 저장
+        localStorage.setItem(`last_page_${currentBookId}`, currentIndex);
+    }
+}
+
+// --- 추가: 앱 실행 시 마지막 책 자동 로드 ---
+window.addEventListener('DOMContentLoaded', async () => {
+    const lastBookId = localStorage.getItem('last_read_book_id');
+    if (lastBookId) {
+        await loadBook(lastBookId);
+    } else {
+        renderBook(); // 저장된 책이 없으면 빈 화면 렌더링
+    }
+});
+
+// 리사이즈 시에도 현재 페이지 유지하도록 개선
+window.addEventListener('resize', async () => { 
+    if(editor.value) {
+        const preResizeIdx = currentIndex; 
+        await renderBook(); 
+        currentIndex = preResizeIdx;
+        updateSlider();
+    } 
+});
+
 
         async function renderBook() {
             const rawContent = editor.value || "";
