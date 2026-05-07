@@ -282,30 +282,6 @@
 
         // ... 기존 변수 선언부 동일 ...
 
-async function loadBook(id) {
-    const { data } = await _supabase.from('ebooks').select('*').eq('id', id).single();
-    if (data) {
-        currentBookId = data.id;
-        titleInput.value = data.title;
-        editor.value = data.content;
-        
-        // 1. 마지막 읽은 책 ID 저장
-        localStorage.setItem('last_read_book_id', id);
-
-        // 2. 책 렌더링 (페이지 분할 계산 완료까지 대기)
-        await renderBook();
-        
-        // 3. 로컬 스토리지에서 해당 도서의 마지막 페이지 불러오기
-        const savedPage = localStorage.getItem(`last_page_${id}`);
-        currentIndex = savedPage ? parseInt(savedPage) : 0;
-        
-        // 4. 페이지 범위 방어 코드
-        if (currentIndex >= totalPages) currentIndex = 0;
-
-        updateSlider();
-        closeModal('library-modal');
-    }
-}
 
 // 페이지 이동 시 저장하는 부분 (기존 updateSlider 유지/확인)
 function updateSlider() {
@@ -319,16 +295,6 @@ function updateSlider() {
     }
 }
 
-// --- 추가: 앱 실행 시 마지막 책 자동 로드 ---
-window.addEventListener('DOMContentLoaded', async () => {
-    const lastBookId = localStorage.getItem('last_read_book_id');
-    if (lastBookId) {
-        await loadBook(lastBookId);
-    } else {
-        renderBook(); // 저장된 책이 없으면 빈 화면 렌더링
-    }
-});
-
 // 리사이즈 시에도 현재 페이지 유지하도록 개선
 window.addEventListener('resize', async () => { 
     if(editor.value) {
@@ -340,45 +306,104 @@ window.addEventListener('resize', async () => {
 });
 
 
-        async function renderBook() {
-            const rawContent = editor.value || "";
-            const viewportH = document.querySelector('.book-viewport').offsetHeight;
-            const maxH = viewportH * 0.82; 
-            viewerContainer.innerHTML = "";
-            tempMeasurer.innerHTML = "";
-            
-            const formattedContent = rawContent
-                .replace(/\[(.*?)\]/g, '<strong class="book-bold">$1</strong>')
-                .replace(/\((\d+)\)/g, '<span class="book-highlight sup-highlight">($1)</span>')
-                .replace(/\(([^0-9].*?)\)/g, '<span class="book-highlight">($1)</span>');
+// 1. renderBook을 Promise를 반환하도록 수정 (렌더링 완료 보장)
+async function renderBook() {
+    return new Promise((resolve) => {
+        const rawContent = editor.value || "";
+        const viewportH = document.querySelector('.book-viewport').offsetHeight;
+        const maxH = viewportH * 0.82; 
+        viewerContainer.innerHTML = "";
+        tempMeasurer.innerHTML = "";
+        
+        const formattedContent = rawContent
+            .replace(/\[(.*?)\]/g, '<strong class="book-bold">$1</strong>')
+            .replace(/\((\d+)\)/g, '<span class="book-highlight sup-highlight">($1)</span>')
+            .replace(/\(([^0-9].*?)\)/g, '<span class="book-highlight">($1)</span>');
 
-            const parts = formattedContent.split(/(<img[^>]*>)/g);
-            let currentPageHTML = "";
-            let pageNum = 1;
+        const parts = formattedContent.split(/(<img[^>]*>)/g);
+        let currentPageHTML = "";
+        let pageNum = 1;
 
-            for (let part of parts) {
-                if (part.startsWith('<img')) {
-                    tempMeasurer.innerHTML = currentPageHTML + part;
+        for (let part of parts) {
+            if (part.startsWith('<img')) {
+                tempMeasurer.innerHTML = currentPageHTML + part;
+                if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
+                    addPageToViewer(currentPageHTML); pageNum++; currentPageHTML = part;
+                } else { currentPageHTML += part; }
+            } else {
+                const tokens = part.split(/(<[^>]*>|\s+)/);
+                for (let token of tokens) {
+                    if (!token) continue;
+                    const testContent = currentPageHTML + token;
+                    tempMeasurer.innerHTML = testContent;
                     if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
-                        addPageToViewer(currentPageHTML); pageNum++; currentPageHTML = part;
-                    } else { currentPageHTML += part; }
-                } else {
-                    const tokens = part.split(/(<[^>]*>|\s+)/);
-                    for (let token of tokens) {
-                        if (!token) continue;
-                        const testContent = currentPageHTML + token;
-                        tempMeasurer.innerHTML = testContent;
-                        if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
-                            addPageToViewer(currentPageHTML); pageNum++; currentPageHTML = token; tempMeasurer.innerHTML = token;
-                        } else { currentPageHTML = testContent; }
-                    }
+                        addPageToViewer(currentPageHTML); pageNum++; currentPageHTML = token; tempMeasurer.innerHTML = token;
+                    } else { currentPageHTML = testContent; }
                 }
             }
-            if (currentPageHTML.trim() !== "") addPageToViewer(currentPageHTML);
-            totalPages = pageNum || 1;
-            updateSlider();
-            document.getElementById('display-title').innerText = titleInput.value || "불러온 책 없음";
         }
+        if (currentPageHTML.trim() !== "") addPageToViewer(currentPageHTML);
+        
+        totalPages = pageNum || 1;
+        document.getElementById('display-title').innerText = titleInput.value || "불러온 책 없음";
+        
+        // 렌더링이 끝났음을 알림
+        resolve();
+    });
+}
+
+// 2. loadBook 함수 수정 (렌더링 완료 후 페이지 이동)
+async function loadBook(id) {
+    const { data } = await _supabase.from('ebooks').select('*').eq('id', id).single();
+    if (data) {
+        currentBookId = data.id;
+        titleInput.value = data.title;
+        editor.value = data.content;
+        
+        // 마지막 읽은 책 ID 저장
+        localStorage.setItem('last_read_book_id', id);
+
+        // 중요: 렌더링이 완전히 끝날 때까지 기다림 (await)
+        await renderBook();
+        
+        // 렌더링 후 페이지 설정
+        const savedPage = localStorage.getItem(`last_page_${id}`);
+        if (savedPage !== null) {
+            currentIndex = parseInt(savedPage);
+            // 만약 글자 크기 변경 등으로 전체 페이지가 줄어들었을 경우를 대비
+            if (currentIndex >= totalPages) currentIndex = totalPages - 1;
+            if (currentIndex < 0) currentIndex = 0;
+        } else {
+            currentIndex = 0;
+        }
+
+        updateSlider();
+        closeModal('library-modal');
+    }
+}
+
+// 3. 페이지 이동 시 저장 로직 (기존과 동일하지만 재확인)
+function updateSlider() {
+    const w = document.querySelector('.book-viewport').offsetWidth;
+    if (!w) return; // 뷰포트 크기가 없으면 중단
+    
+    viewerContainer.style.transform = `translateX(${-currentIndex * w}px)`;
+    pageIndicator.innerText = `${currentIndex + 1} / ${totalPages}`;
+    
+    if (currentBookId) {
+        localStorage.setItem(`last_page_${currentBookId}`, currentIndex);
+    }
+}
+
+// 4. 초기 실행 로직
+window.addEventListener('DOMContentLoaded', async () => {
+    const lastBookId = localStorage.getItem('last_read_book_id');
+    if (lastBookId) {
+        await loadBook(lastBookId);
+    } else {
+        await renderBook();
+    }
+});
 
         function addPageToViewer(content) {
             const pageDiv = document.createElement('div');
@@ -387,16 +412,6 @@ window.addEventListener('resize', async () => {
             viewerContainer.appendChild(pageDiv);
         }
 
-        function updateSlider() {
-            const w = document.querySelector('.book-viewport').offsetWidth;
-            viewerContainer.style.transform = `translateX(${-currentIndex * w}px)`;
-            pageIndicator.innerText = `${currentIndex + 1} / ${totalPages}`;
-            
-            // 페이지 이동 시마다 로컬 스토리지에 자동 저장
-            if (currentBookId) {
-                localStorage.setItem(`last_page_${currentBookId}`, currentIndex);
-            }
-        }
 
         function movePage(dir) {
             const newIdx = currentIndex + dir;
