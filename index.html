@@ -56,7 +56,7 @@
 
 /* 전체 모달 스타일 중 북마크 모달만 폭을 줄이고 싶을 때 */
 #bookmark-modal {
-    width: min(350px, 50%); /* 기존 700px/90%의 절반 수준 */
+    width: min(450px, 80%); /* 기존 700px/90%의 절반 수준 */
 }
         
 /* 북마크 아이템 행 설정 */
@@ -145,9 +145,47 @@
     background-color: rgba(52, 152, 219, 0.1);
     text-decoration-style: solid;
 }
-        textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: vertical; }
+        textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: none; font-size: 15px}
         #anno-viewer-popup { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 15px; z-index: 2000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
         #temp-measurer { width: calc(var(--p-width) - 20vw); font-size: var(--font-size); line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all; }
+
+/* 기존 .modal 스타일은 유지하고 아래 내용을 추가하거나 수정하세요 */
+
+/* 편집 모달을 화면에 꽉 차게 설정 (가로 95%, 세로 90%) */
+#setting-modal {
+    width: 95vw; 
+    max-width: 1200px; /* 최대 너비 제한 해제 또는 확장 */
+    height: 90vh;
+    display: none; /* 기본값 */
+    flex-direction: column;
+}
+
+/* 편집 모달 내부의 textarea가 남은 공간을 모두 차지하도록 설정 */
+#setting-modal textarea {
+    flex: 1; /* 부모 컨테이너의 남은 높이를 모두 점유 */
+    height: auto; /* 고정 높이 해제 */
+    min-height: 500px; /* 최소 높이 보장 */
+    margin-bottom: 15px;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* 내 서재 모달을 북마크 모달과 동일한 크기로 설정 */
+#library-modal {
+    width: min(450px, 80%); /* 북마크 모달(350px)과 동일한 너비 */
+    max-height: 70vh;       /* 세로 길이는 적당히 제한 */
+}
+
+/* 서재 내부 리스트 아이템 스타일 보정 (선택 사항) */
+#book-list-container > div {
+    transition: background 0.2s;
+    border-radius: 10px;
+    margin-bottom: 5px;
+}
+
+#book-list-container > div:hover {
+    background-color: #f8f9fa;
+}
     </style>
 </head>
 <body>
@@ -214,7 +252,7 @@
         <h3 style="margin:0;">🎨 도서 편집/추가</h3>
         <button class="btn-small" onclick="prepareNewBook()" style="background:#27ae60; color:white;">+ 새 도서 작성</button>
     </div>
-    <input type="text" id="book-title" placeholder="제목" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
+    <input type="text" id="book-title" placeholder="제목" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd; font-size: 15px">
     <textarea id="editor" style="height:300px;" placeholder="내용을 입력하세요..."></textarea>
     <button class="btn-action" onclick="handleSave()">💾 저장하기</button>
     <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">닫기</button>
@@ -263,6 +301,39 @@
             const saved = localStorage.getItem(`eb_bookmarks_${bookId}`);
             return saved ? JSON.parse(saved) : null;
         }
+
+async function deleteBook(id, event) {
+    // 부모 요소인 도서 로드 클릭 이벤트가 발생하지 않도록 방지
+    event.stopPropagation();
+
+    if (!confirm("이 도서를 영구적으로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+        return;
+    }
+
+    try {
+        const { error } = await _supabase.from('ebooks').delete().eq('id', id);
+        
+        if (error) throw error;
+
+        alert("도서가 삭제되었습니다.");
+
+        // 현재 보고 있던 도서가 삭제된 경우 화면 초기화
+        if (currentBookId === id) {
+            currentBookId = null;
+            document.getElementById('book-title').value = "";
+            document.getElementById('editor').value = "";
+            document.getElementById('display-title').innerText = "불러온 도서 없음";
+            localStorage.removeItem('eb_lastBookId');
+            renderBook();
+        }
+
+        // 서재 목록 갱신
+        openLibrary();
+    } catch (err) {
+        console.error("삭제 실패:", err.message);
+        alert("삭제 중 오류가 발생했습니다: " + err.message);
+    }
+}
 
 function openBookmarks() {
     const container = document.getElementById('bookmark-list-container');
@@ -420,14 +491,27 @@ function openAllAnnotations(highlightNum = null) {
             viewerContainer.appendChild(div);
         }
 
-        // --- 데이터 로직 ---
-        async function openLibrary() {
-            openModal('library-modal');
-            const { data } = await _supabase.from('ebooks').select('id, title');
-            document.getElementById('book-list-container').innerHTML = data.map(b => `
-                <div onclick="loadBook('${b.id}')" style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;">📘 ${b.title}</div>
-            `).join('');
-        }
+async function openLibrary() {
+    openModal('library-modal');
+    const { data, error } = await _supabase.from('ebooks').select('id, title').order('created_at', { ascending: false });
+    
+    if (error) {
+        console.error("도서 목록 로드 실패:", error.message);
+        return;
+    }
+
+    const container = document.getElementById('book-list-container');
+    if (data.length === 0) {
+        container.innerHTML = "<p style='text-align:center; padding:20px;'>서재가 비어 있습니다.</p>";
+    } else {
+        container.innerHTML = data.map(b => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="loadBook('${b.id}')">
+                <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📘 ${b.title}</span>
+                <button class="btn-small" style="background:#e74c3c; color:white; border:none; margin-left:10px;" onclick="deleteBook('${b.id}', event)">삭제</button>
+            </div>
+        `).join('');
+    }
+}
 
         async function loadBook(id, page = 0) {
             const { data } = await _supabase.from('ebooks').select('*').eq('id', id).single();
@@ -450,6 +534,58 @@ function openAllAnnotations(highlightNum = null) {
         function openModal(id) { document.getElementById(id).style.display = 'block'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+// --- 새 도서 작성 준비 ---
+function prepareNewBook() {
+    currentBookId = null; // ID 초기화 (새 데이터임을 표시)
+    document.getElementById('book-title').value = "";
+    document.getElementById('editor').value = "";
+    currentAnnotations = {};
+    currentBookmarks = [];
+    alert("새 도서 작성 모드입니다. 내용을 입력 후 저장하세요.");
+}
+
+async function handleSave() {
+    const title = document.getElementById('book-title').value.trim();
+    const content = document.getElementById('editor').value.trim();
+
+    if (!title || !content) {
+        alert("제목과 내용을 입력해주세요.");
+        return;
+    }
+
+const bookData = {
+    title: title,
+    content: content,
+    annotations: currentAnnotations || {}, // JSON 객체 형식
+    bookmarks: currentBookmarks || [],      // JSON 배열 형식
+    // updated_at은 트리거가 자동으로 처리하므로 생략 가능합니다.
+};
+    try {
+        let res;
+        if (currentBookId) {
+            // 1. 기존 도서 수정 (UPDATE)
+            res = await _supabase.from('ebooks').update(bookData).eq('id', currentBookId).select();
+        } else {
+            // 2. 새 도서 작성 (INSERT)
+            res = await _supabase.from('ebooks').insert([bookData]).select();
+        }
+
+        if (res.error) throw res.error;
+
+        alert(currentBookId ? "수정 완료!" : "새 도서 저장 완료!");
+        
+        // 저장 후 새로 생성된 ID가 있다면 업데이트
+        if (!currentBookId && res.data && res.data[0]) {
+            currentBookId = res.data[0].id;
+        }
+
+        await renderBook(); // 화면 갱신
+        closeModal('setting-modal');
+    } catch (err) {
+        console.error("데이터 저장 실패:", err.message);
+        alert("저장 실패: " + err.message);
+    }
+}
         let tX = 0;
         document.getElementById('swipe-area').addEventListener('touchstart', e => tX = e.touches[0].screenX, {passive:true});
         document.getElementById('swipe-area').addEventListener('touchend', e => {
