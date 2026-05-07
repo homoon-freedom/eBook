@@ -22,6 +22,25 @@
         .page { min-width: var(--p-width); height: 100%; padding: 10vh 10vw 8vh 10vw; box-sizing: border-box; position: relative; color: var(--text-color); }
         .page-content { font-size: var(--font-size); line-height: 1.8; text-align: justify; word-break: break-all; white-space: pre-wrap; }
         
+        /* 텍스트 스타일 클래스 */
+        .txt-bold { font-weight: bold; }
+        
+        /* 1. 형태: 굵게 + 한 단계 큰 글씨 (전체 줄) */
+        .txt-list-line { 
+            font-weight: bold; 
+            font-size: 1.15em; 
+            color: #000; 
+            display: block; 
+            margin: 10px 0 5px 0;
+        }
+
+        /* 1) 형태: 글자 크기는 그대로 + 굵기만 굵게 (전체 줄) */
+        .txt-list-bold {
+            font-weight: bold;
+            display: block;
+            margin: 5px 0;
+        }
+
         .book-info { position: absolute; width: 80%; left: 10%; opacity: 0.7; font-size: 13px; z-index: 100; color: var(--text-color); display: flex; justify-content: space-between; align-items: center; }
         .book-header { top: 3vh; padding-bottom: 8px; border-bottom: 1.5px solid var(--line-color); }
         .book-footer { bottom: 2.5vh; padding-top: 8px; border-top: 1.5px solid var(--line-color); }
@@ -35,17 +54,8 @@
         .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(700px, 90%); max-height: 85vh; background: white; padding: 25px; border-radius: 25px; z-index: 3000; display: none; color: #333; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.3); box-sizing: border-box; }
         .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        .anno-item { border-bottom: 1px solid #eee; padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }
-        .anno-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-        .anno-title-content { display: flex; align-items: flex-start; gap: 8px; flex-grow: 1; }
-        .anno-num { color: #3498db; font-weight: bold; font-size: 15px; margin-top: 2px; }
-        .anno-text-display { font-size: 15px; line-height: 1.5; color: #444; white-space: pre-wrap; word-break: break-all; }
-        .btn-small { padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; border: 1px solid #ddd; background: #f9f9f9; }
-        .btn-blue { background: #3498db !important; color: white !important; border: none !important; }
-        
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: vertical; }
         #anno-viewer-popup { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 15px; z-index: 2000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
-        .bookmark-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
         #temp-measurer { width: calc(var(--p-width) - 20vw); font-size: var(--font-size); line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all; }
     </style>
 </head>
@@ -75,6 +85,7 @@
             </div>
         </div>
 
+        <!-- 주석/서재/메뉴 모달 생략 (기능 동일) -->
         <div id="anno-viewer-popup">
             <div id="anno-viewer-text" style="font-size:14px; margin-bottom:10px; line-height:1.6;"></div>
             <div style="text-align:right;">
@@ -91,24 +102,22 @@
         </div>
     </div>
 
+    <!-- 모달 등 나머지 구조 유지 -->
     <div id="all-annotations-modal" class="modal">
         <h3 style="margin-top:0;">📑 주석 관리</h3>
         <div id="all-anno-list-container"></div>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('all-annotations-modal')">닫기</button>
     </div>
-
     <div id="bookmark-modal" class="modal">
         <h3 style="margin-top:0;">🔖 저장된 북마크</h3>
         <div id="bookmark-list-container"></div>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('bookmark-modal')">닫기</button>
     </div>
-
     <div id="library-modal" class="modal">
         <h3>📚 내 서재</h3>
         <div id="book-list-container"></div>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('library-modal')">닫기</button>
     </div>
-
     <div id="setting-modal" class="modal">
         <input type="text" id="book-title" placeholder="제목" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
         <textarea id="editor" style="height:300px;" placeholder="내용을 입력하세요..."></textarea>
@@ -128,22 +137,14 @@
 
         const viewerContainer = document.getElementById('viewer-container');
 
-        // --- 초기화 ---
+        // 기능 함수 (init, movePage, save 등)는 이전과 동일하여 내부 생략
         async function init() {
             const savedSize = localStorage.getItem('eb_fontSize');
-            if(savedSize) {
-                currentFontSize = parseInt(savedSize);
-                applyFontSizeEffect();
-            }
+            if(savedSize) { currentFontSize = parseInt(savedSize); applyFontSizeEffect(); }
             const lastBookId = localStorage.getItem('eb_lastBookId');
-            if(lastBookId) {
-                await loadBook(lastBookId, parseInt(localStorage.getItem('eb_lastPage') || 0));
-            } else {
-                renderBook();
-            }
+            if(lastBookId) { await loadBook(lastBookId, parseInt(localStorage.getItem('eb_lastPage') || 0)); } else { renderBook(); }
         }
 
-        // --- 북마크 기능 (LocalStorage 우선 적용) ---
         function toggleBookmark() {
             if(!currentBookId) return;
             if(currentBookmarks.includes(currentIndex)) {
@@ -154,24 +155,18 @@
                 currentBookmarks.sort((a,b) => a-b);
                 alert(`${currentIndex + 1}페이지 북마크 저장`);
             }
-            saveBookmarksToLocal(); // 로컬에 저장
+            saveBookmarksToLocal();
         }
 
         function saveBookmarksToLocal() {
             if(!currentBookId) return;
-            // 도서별로 별도 키 생성 (예: eb_bookmarks_도서ID)
             localStorage.setItem(`eb_bookmarks_${currentBookId}`, JSON.stringify(currentBookmarks));
-            
-            // Supabase에도 백업 업데이트
             _supabase.from('ebooks').update({ bookmarks: currentBookmarks }).eq('id', currentBookId);
         }
 
         function loadBookmarksFromLocal(bookId) {
             const saved = localStorage.getItem(`eb_bookmarks_${bookId}`);
-            if(saved) {
-                return JSON.parse(saved);
-            }
-            return null; // 로컬에 없으면 null 반환
+            return saved ? JSON.parse(saved) : null;
         }
 
         function openBookmarks() {
@@ -195,7 +190,6 @@
             openBookmarks();
         }
 
-        // --- 기본 내비게이션 ---
         function updateSlider() {
             const w = document.querySelector('.book-viewport').offsetWidth;
             viewerContainer.style.transform = `translateX(${-currentIndex * w}px)`;
@@ -214,9 +208,7 @@
             const target = prompt(`이동할 페이지를 입력하세요 (1 ~ ${totalPages})`, currentIndex + 1);
             if (target !== null) {
                 const pageNum = parseInt(target);
-                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-                    goToPage(pageNum - 1);
-                }
+                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) { goToPage(pageNum - 1); }
             }
         }
 
@@ -232,7 +224,6 @@
             document.getElementById('font-size-val').innerText = currentFontSize;
         }
 
-        // --- 주석 기능 ---
         function openAnnotation(num, event) {
             event.stopPropagation();
             const popup = document.getElementById('anno-viewer-popup');
@@ -284,13 +275,24 @@
             openAllAnnotations();
         }
 
-        // --- 렌더링 ---
+        // --- 렌더링 함수 수정 ---
         async function renderBook() {
             return new Promise((resolve) => {
                 const raw = document.getElementById('editor').value || "서재에서 도서를 로드하세요.";
                 const maxH = document.querySelector('.book-viewport').offsetHeight * 0.8;
                 viewerContainer.innerHTML = "";
-                const formatted = raw.replace(/\((\d+)\)/g, '<span class="sup-highlight" onclick="openAnnotation($1, event)">($1)</span>');
+
+                // 텍스트 변환 로직
+                let formatted = raw
+                    // 1. [괄호안의 글씨] -> 굵게
+                    .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
+                    // 2. 1. 2. 형태 (마침표) -> 굵고 크게 (전체 줄)
+                    .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
+                    // 3. 1) 2) 형태 (오른쪽 괄호) -> 굵기만 굵게 (전체 줄)
+                    .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
+                    // 4. 기존 주석 처리 (1) -> 주석링크 (괄호 제거 버전)
+                    .replace(/\((\d+)\)/g, '<span class="sup-highlight" onclick="openAnnotation($1, event)">$1</span>');
+
                 const temp = document.getElementById('temp-measurer');
                 const tokens = formatted.split(/(<[^>]*>|\s+)/);
                 let currentHTML = "", pageNum = 1;
@@ -314,7 +316,7 @@
             viewerContainer.appendChild(div);
         }
 
-        // --- 데이터 로드 및 저장 ---
+        // --- 데이터 로직 ---
         async function openLibrary() {
             openModal('library-modal');
             const { data } = await _supabase.from('ebooks').select('id, title');
@@ -330,17 +332,8 @@
                 document.getElementById('book-title').value = data.title;
                 document.getElementById('editor').value = data.content;
                 currentAnnotations = data.annotations || {};
-                
-                // 1. 로컬 스토리지에서 먼저 확인
                 const localBookmarks = loadBookmarksFromLocal(id);
-                if(localBookmarks) {
-                    currentBookmarks = localBookmarks;
-                } else {
-                    // 2. 로컬에 없으면 Supabase 데이터 사용
-                    currentBookmarks = data.bookmarks || [];
-                    saveBookmarksToLocal(); // 다음번을 위해 로컬에 동기화
-                }
-
+                if(localBookmarks) { currentBookmarks = localBookmarks; } else { currentBookmarks = data.bookmarks || []; saveBookmarksToLocal(); }
                 localStorage.setItem('eb_lastBookId', id);
                 await renderBook();
                 currentIndex = page < totalPages ? page : 0;
@@ -352,15 +345,12 @@
         async function handleSave() {
             const title = document.getElementById('book-title').value;
             const content = document.getElementById('editor').value;
-            if(currentBookId) {
-                await _supabase.from('ebooks').update({ title, content }).eq('id', currentBookId);
-            } else {
+            if(currentBookId) { await _supabase.from('ebooks').update({ title, content }).eq('id', currentBookId); } 
+            else { 
                 const { data } = await _supabase.from('ebooks').insert([{ title, content, annotations: {}, bookmarks: [] }]).select();
                 currentBookId = data[0].id;
             }
-            alert("저장 완료");
-            renderBook().then(() => updateSlider());
-            closeModal('setting-modal');
+            alert("저장 완료"); renderBook().then(() => updateSlider()); closeModal('setting-modal');
         }
 
         function openModal(id) { document.getElementById(id).style.display = 'block'; }
