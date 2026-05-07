@@ -170,6 +170,22 @@
     line-height: 1.6;
 }
 
+/* 도서 편집 모달 내의 '+ 새 도서 작성' 버튼 전용 스타일 */
+#setting-modal .btn-small[onclick="prepareNewBook()"] {
+    padding: 12px 24px;      /* 버튼의 위아래, 좌우 여백을 크게 */
+    font-size: 18px;         /* 글자 크기 확대 */
+    font-weight: bold;       /* 글자 두껍게 */
+    border-radius: 10px;     /* 모서리를 조금 더 부드럽게 */
+    box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3); /* 살짝 그림자 효과로 입체감 부여 */
+    transition: all 0.2s;    /* 누를 때 부드러운 효과 */
+}
+
+/* 마우스를 올렸을 때 살짝 더 커지는 효과 (선택 사항) */
+#setting-modal .btn-small[onclick="prepareNewBook()"]:hover {
+    transform: scale(1.05);
+    background-color: #2ecc71; /* 마우스 올리면 색상 더 밝게 */
+}
+
 /* 내 서재 모달을 북마크 모달과 동일한 크기로 설정 */
 #library-modal {
     width: min(400px, 80%); /* 북마크 모달(350px)과 동일한 너비 */
@@ -248,10 +264,15 @@
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('library-modal')">닫기</button>
     </div>
 <div id="setting-modal" class="modal">
-    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3 style="margin:0;">🎨 도서 편집/추가</h3>
-        <button class="btn-small" onclick="prepareNewBook()" style="background:#27ae60; color:white;">+ 새 도서 작성</button>
-    </div>
+<div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <h3 style="margin:0;">🎨 도서 편집/추가</h3>
+    <button class="btn-small" onclick="prepareNewBook()" style="background:#27ae60; color:white;">+ 새 도서 작성</button>
+</div>
+
+<div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+    <h2 style="margin:0; font-size: 24px;">🎨 도서 편집/추가</h2>
+    <button class="btn-small" onclick="prepareNewBook()" style="background:#27ae60; color:white; border:none;">+ 새 도서 작성</button>
+</div>
     <input type="text" id="book-title" placeholder="제목" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd; font-size: 15px">
     <textarea id="editor" style="height:300px;" placeholder="내용을 입력하세요..."></textarea>
     <button class="btn-action" onclick="handleSave()">💾 저장하기</button>
