@@ -53,7 +53,98 @@
         
         .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(700px, 90%); max-height: 85vh; background: white; padding: 25px; border-radius: 25px; z-index: 3000; display: none; color: #333; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.3); box-sizing: border-box; }
         .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+/* 전체 모달 스타일 중 북마크 모달만 폭을 줄이고 싶을 때 */
+#bookmark-modal {
+    width: min(350px, 50%); /* 기존 700px/90%의 절반 수준 */
+}
         
+/* 북마크 아이템 행 설정 */
+.bookmark-item {
+    display: flex;             /* 가로 정렬 */
+    justify-content: space-between; /* 양 끝으로 배치 (텍스트는 왼쪽, 버튼은 오른쪽) */
+    align-items: center;       /* 세로 중앙 정렬 */
+    padding: 12px 15px;        /* 여백 추가 */
+    border-bottom: 1px solid #eee; /* 구분선 */
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.bookmark-item:hover {
+    background-color: #f8f9fa; /* 마우스 올렸을 때 효과 */
+}
+
+/* 삭제 버튼 스타일 살짝 보정 */
+.bookmark-item .btn-small {
+    margin-left: 10px;         /* 텍스트와 최소 간격 유지 */
+    flex-shrink: 0;            /* 버튼 모양 유지 */
+}
+
+/* 주석 리스트 항목 설정 */
+.anno-item {
+    padding: 12px 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* 번호, 내용, 버튼을 감싸는 상단 행 */
+.anno-row-top {
+    display: flex;             /* 가로 정렬 */
+    justify-content: space-between; /* 양 끝으로 배치 */
+    align-items: center;       /* 세로 중앙 정렬 */
+    gap: 10px;
+}
+
+/* 번호와 내용을 묶어주는 컨테이너 */
+.anno-title-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;                  /* 가능한 넓은 공간 차지 */
+    min-width: 0;             /* 내용이 길어질 때 줄바꿈 방지 보조 */
+}
+
+/* 주석 번호 스타일 */
+.anno-num {
+    font-weight: bold;
+    color: #3498db;
+    white-space: nowrap;      /* 번호 줄바꿈 방지 */
+}
+
+/* 주석 텍스트 출력부 */
+.anno-text-display {
+    font-size: 14px;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 내용이 너무 길면 ... 처리 */
+    white-space: nowrap;     /* 한 줄 유지 */
+}
+
+/* 수정 버튼이 밀리지 않게 설정 */
+.anno-row-top .btn-small {
+    flex-shrink: 0;
+}
+
+/* 주석 전체 그룹(번호 + 우측 글씨) */
+.anno-clickable-group {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+/* 주석 번호 옆의 실제 본문 글씨 스타일 */
+.anno-text-link {
+    text-decoration: underline;
+    text-decoration-style: dotted; /* 점선 밑줄로 주석임을 표시 */
+    text-decoration-color: #3498db;
+    color: inherit; /* 본문 색상 유지 */
+}
+
+/* 마우스 올렸을 때 강조 */
+.anno-clickable-group:hover .anno-text-link {
+    background-color: rgba(52, 152, 219, 0.1);
+    text-decoration-style: solid;
+}
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: vertical; }
         #anno-viewer-popup { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 15px; z-index: 2000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
         #temp-measurer { width: calc(var(--p-width) - 20vw); font-size: var(--font-size); line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all; }
@@ -118,12 +209,16 @@
         <div id="book-list-container"></div>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('library-modal')">닫기</button>
     </div>
-    <div id="setting-modal" class="modal">
-        <input type="text" id="book-title" placeholder="제목" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
-        <textarea id="editor" style="height:300px;" placeholder="내용을 입력하세요..."></textarea>
-        <button class="btn-action" onclick="handleSave()">💾 저장하기</button>
-        <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">닫기</button>
+<div id="setting-modal" class="modal">
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin:0;">🎨 도서 편집/추가</h3>
+        <button class="btn-small" onclick="prepareNewBook()" style="background:#27ae60; color:white;">+ 새 도서 작성</button>
     </div>
+    <input type="text" id="book-title" placeholder="제목" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd;">
+    <textarea id="editor" style="height:300px;" placeholder="내용을 입력하세요..."></textarea>
+    <button class="btn-action" onclick="handleSave()">💾 저장하기</button>
+    <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">닫기</button>
+</div>
 
     <div id="temp-measurer"></div>
 
@@ -169,21 +264,20 @@
             return saved ? JSON.parse(saved) : null;
         }
 
-        function openBookmarks() {
-            const container = document.getElementById('bookmark-list-container');
-            if(currentBookmarks.length === 0) {
-                container.innerHTML = "<p style='text-align:center;'>저장된 북마크가 없습니다.</p>";
-            } else {
-                container.innerHTML = currentBookmarks.map(p => `
-                    <div class="bookmark-item" onclick="goToPage(${p}); closeModal('bookmark-modal');">
-                        <span>🔖 페이지 ${p + 1}</span>
-                        <button class="btn-small" onclick="event.stopPropagation(); removeBookmark(${p})">삭제</button>
-                    </div>
-                `).join('');
-            }
-            openModal('bookmark-modal');
-        }
-
+function openBookmarks() {
+    const container = document.getElementById('bookmark-list-container');
+    if(currentBookmarks.length === 0) {
+        container.innerHTML = "<p style='text-align:center;'>저장된 북마크가 없습니다.</p>";
+    } else {
+        container.innerHTML = currentBookmarks.map(p => `
+            <div class="bookmark-item" onclick="goToPage(${p}); closeModal('bookmark-modal');">
+                <span>🔖 페이지 ${p + 1}</span>
+                <button class="btn-small" onclick="event.stopPropagation(); removeBookmark(${p})">삭제</button>
+            </div>
+        `).join('');
+    }
+    openModal('bookmark-modal');
+}
         function removeBookmark(p) {
             currentBookmarks = currentBookmarks.filter(page => page !== p);
             saveBookmarksToLocal();
@@ -232,35 +326,46 @@
             popup.style.display = 'block';
         }
 
-        function openAllAnnotations(highlightNum = null) {
-            const container = document.getElementById('all-anno-list-container');
-            const keys = Object.keys(currentAnnotations).sort((a,b)=>a-b);
-            if (keys.length === 0) {
-                container.innerHTML = "<p style='text-align:center;'>주석이 없습니다.</p>";
-            } else {
-                container.innerHTML = keys.map(n => `
-                    <div id="anno-item-${n}" class="anno-item" style="${highlightNum == n ? 'background:#fffde7;' : ''}">
-                        <div class="anno-row-top" id="anno-view-row-${n}">
-                            <div class="anno-title-content">
-                                <span class="anno-num">(${n})</span>
-                                <div class="anno-text-display">${currentAnnotations[n] || "내용 없음"}</div>
-                            </div>
-                            <button class="btn-small" onclick="toggleAnnoEdit(${n})">수정</button>
-                        </div>
-                        <div id="anno-edit-area-${n}" style="display:none;">
-                            <textarea id="anno-input-${n}">${currentAnnotations[n] || ""}</textarea>
-                            <div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;">
-                                <button class="btn-small btn-blue" onclick="saveAnnoInList(${n})">저장</button>
-                                <button class="btn-small" onclick="cancelAnnoEdit(${n})">취소</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            openModal('all-annotations-modal');
-            if(highlightNum) setTimeout(() => document.getElementById(`anno-item-${highlightNum}`).scrollIntoView({behavior:'smooth'}), 200);
-        }
+function openAllAnnotations(highlightNum = null) {
+    const container = document.getElementById('all-anno-list-container');
+    const content = document.getElementById('editor').value;
+    
+    // 1. 본문에서 (숫자) 형태를 모두 추출하여 유일한 번호 세트 생성
+    const foundNumbers = [...content.matchAll(/\((\d+)\)/g)].map(match => match[1]);
+    
+    // 2. 기존 저장된 주석 키와 본문에서 찾은 번호를 합쳐서 정렬
+    const allKeys = [...new Set([...Object.keys(currentAnnotations), ...foundNumbers])]
+                    .map(Number)
+                    .sort((a, b) => a - b);
 
+    if (allKeys.length === 0) {
+        container.innerHTML = "<p style='text-align:center;'>본문에 주석 번호가 없습니다.</p>";
+    } else {
+        container.innerHTML = allKeys.map(n => `
+            <div id="anno-item-${n}" class="anno-item" style="${highlightNum == n ? 'background:#fffde7;' : ''}">
+                <div class="anno-row-top" id="anno-view-row-${n}">
+                    <div class="anno-title-content">
+                        <span class="anno-num">(${n})</span>
+                        <div class="anno-text-display">${currentAnnotations[n] || "<span style='color:red;'>내용을 입력해주세요</span>"}</div>
+                    </div>
+                    <button class="btn-small" onclick="toggleAnnoEdit(${n})">수정</button>
+                </div>
+                <div id="anno-edit-area-${n}" style="display:none; margin-top:10px;">
+                    <textarea id="anno-input-${n}">${currentAnnotations[n] || ""}</textarea>
+                    <div style="display:flex; gap:5px; margin-top:5px; justify-content:flex-end;">
+                        <button class="btn-small btn-blue" onclick="saveAnnoInList(${n})">저장</button>
+                        <button class="btn-small" onclick="cancelAnnoEdit(${n})">취소</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    openModal('all-annotations-modal');
+    if(highlightNum) setTimeout(() => {
+        const target = document.getElementById(`anno-item-${highlightNum}`);
+        if(target) target.scrollIntoView({behavior:'smooth'});
+    }, 200);
+}
         function toggleAnnoEdit(n) {
             document.getElementById(`anno-view-row-${n}`).style.display = 'none';
             document.getElementById(`anno-edit-area-${n}`).style.display = 'block';
@@ -291,8 +396,7 @@
                     // 3. 1) 2) 형태 (오른쪽 괄호) -> 굵기만 굵게 (전체 줄)
                     .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
                     // 4. 기존 주석 처리 (1) -> 주석링크 (괄호 제거 버전)
-                    .replace(/\((\d+)\)/g, '<span class="sup-highlight" onclick="openAnnotation($1, event)">$1</span>');
-
+                    .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>');
                 const temp = document.getElementById('temp-measurer');
                 const tokens = formatted.split(/(<[^>]*>|\s+)/);
                 let currentHTML = "", pageNum = 1;
@@ -342,17 +446,7 @@
             }
         }
 
-        async function handleSave() {
-            const title = document.getElementById('book-title').value;
-            const content = document.getElementById('editor').value;
-            if(currentBookId) { await _supabase.from('ebooks').update({ title, content }).eq('id', currentBookId); } 
-            else { 
-                const { data } = await _supabase.from('ebooks').insert([{ title, content, annotations: {}, bookmarks: [] }]).select();
-                currentBookId = data[0].id;
-            }
-            alert("저장 완료"); renderBook().then(() => updateSlider()); closeModal('setting-modal');
-        }
-
+      
         function openModal(id) { document.getElementById(id).style.display = 'block'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
