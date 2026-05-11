@@ -467,58 +467,55 @@ function openAllAnnotations(highlightNum = null) {
             openAllAnnotations();
         }
 
-        async function renderBook() {
-            return new Promise((resolve) => {
-                const raw = document.getElementById('editor').value || "서재에서 도서를 로드하세요.";
-                const maxH = document.querySelector('.book-viewport').offsetHeight * 0.8;
-                viewerContainer.innerHTML = "";
+async function renderBook() {
+    const rawContent = editor.value || "";
+    const viewportH = document.querySelector('.book-viewport').offsetHeight;
+    const maxH = viewportH * 0.82; 
+    
+    viewerContainer.innerHTML = "";
+    tempMeasurer.innerHTML = "";
+    
+    const parts = rawContent.split(/(<img[^>]*>)/g);
+    let currentPageHTML = "";
+    let pageNum = 1;
 
-                // 1. {p}를 기준으로 섹션을 먼저 나눕니다.
-                const sections = raw.split('{p}');
-                let pageNum = 0;
+    for (let part of parts) {
+        if (part.startsWith('<img')) {
+            tempMeasurer.innerHTML = currentPageHTML + part;
+            if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
+                addPageToViewer(currentPageHTML, pageNum++);
+                currentPageHTML = part;
+            } else currentPageHTML += part;
+        } else {
+            // 1. [] 강조 스타일 (크게, 굵게)
+            let formatted = part.replace(/\[(.*?)\]/g, 
+                '<strong style="display:inline-block; font-size:1.15em; font-weight:bold; margin: 5px 0;">$1</strong>');
+            
+            // 2. () 파란색 스타일
+            formatted = formatted.replace(/\((.*?)\)/g, 
+                '<span style="color:var(--point-blue); font-weight:500;">($1)</span>');
 
-                sections.forEach((section, sIdx) => {
-                    // 섹션이 비어있으면 스킵 (연속 {p} 방지)
-                    if (section.trim() === "" && sIdx !== 0) return;
+            // 3. [추가] “” 사이를 이탤릭체로 변경
+            // font-style: italic 속성을 적용합니다.
+            formatted = formatted.replace(/“(.*?)”/g, 
+                '<span style="font-style: italic; opacity: 0.9;">“$1”</span>');
 
-                    // 텍스트 변환 로직 (기존 스타일 유지)
-                    let formatted = section
-                        .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
-                        .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
-                        .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
-                        .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>');
-
-                    const temp = document.getElementById('temp-measurer');
-                    const tokens = formatted.split(/(<[^>]*>|\s+)/);
-                    
-                    let currentHTML = "";
-
-                    for (let t of tokens) {
-                        if (!t) continue;
-                        temp.innerHTML = currentHTML + t;
-                        // 현재 섹션 내에서 높이가 넘어가면 페이지 분할
-                        if (temp.offsetHeight > maxH && currentHTML !== "") {
-                            addPage(currentHTML);
-                            pageNum++;
-                            currentHTML = t;
-                        } else {
-                            currentHTML += t;
-                        }
-                    }
-                    
-                    // 섹션의 남은 부분 페이지 추가
-                    if (currentHTML.trim() !== "" || (sIdx > 0 && currentHTML === "")) {
-                        addPage(currentHTML);
-                        pageNum++;
-                    }
-                });
-
-                totalPages = pageNum;
-                document.getElementById('display-title').innerText = document.getElementById('book-title').value || "제목 없음";
-                resolve();
-            });
+            const words = formatted.split(/(\s+)/);
+            for (let word of words) {
+                const testContent = currentPageHTML + word;
+                tempMeasurer.innerHTML = testContent;
+                if (tempMeasurer.offsetHeight > maxH && currentPageHTML !== "") {
+                    addPageToViewer(currentPageHTML, pageNum++);
+                    currentPageHTML = word;
+                    tempMeasurer.innerHTML = word;
+                } else currentPageHTML = testContent;
+            }
         }
-
+    }
+    if (currentPageHTML.trim() !== "") addPageToViewer(currentPageHTML, pageNum);
+    totalPages = pageNum || 1;
+    updateSlider();
+}
 
         function addPage(content) {
             const div = document.createElement('div'); div.className = 'page';
