@@ -25,9 +25,18 @@
     color: #3498db; /* 파란색 계열 (주석 하이라이트 색상과 동일하게 설정) */
     /* 원하신다면 다른 파란색 코드를 사용하셔도 됩니다. 예: color: blue; 또는 color: #007bff; */
 }
-        .page-content b {
+/* 기존 스타일 아래에 추가 */
+
+/* 큰따옴표(i) 내부에 있는 작은따옴표(b)는 파란색을 유지 */
+.page-content i b {
+    color: inherit;    /* 부모인 i 태그의 색상(#3498db)을 그대로 상속 */
+    font-weight: bold; /* 굵게 효과는 유지 */
+}
+
+/* 일반적인 작은따옴표(b) 스타일 (큰따옴표 밖에 있을 때) */
+.page-content b {
     font-weight: bold;
-    color: var(--text-color); /* 혹은 원하는 색상 */
+    color: var(--text-color); 
 }
         /* 텍스트 스타일 클래스 */
         .txt-bold { font-weight: bold; }
@@ -581,14 +590,20 @@ function openAllAnnotations(highlightNum = null) {
 
             // 2. 섹션 내 텍스트를 HTML로 변환 (따옴표 스타일 포함)
             let formattedHTML = section
-                .replace(/^### (.*$)/gm, '<strong style="display:block; font-size:1.4em; margin: 20px 0 10px 0; color:#2c3e50; border-left:4px solid #3498db; padding-left:10px;">$1</strong>')
-                .replace(/"([^"]*)"/g, '<i class="quote-style">"$1"</i>') 
-                .replace(/'([^']*)'/g, '<b>\'$1\'</b>')
-                .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
-                .replace(/\(([^0-9][^)]*)\)/g, '<span class="txt-gray">($1)</span>')
-                .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
-                .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
-                .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>');
+// renderBook 함수 내 변환 로직 순서
+let formattedHTML = section
+    .replace(/^### (.*$)/gm, '<strong style="...">$1</strong>')
+    // 1. 큰따옴표를 먼저 i 태그로 변환 (파란색 적용 시작)
+    .replace(/"([^"]*)"/g, '<i class="quote-style">"$1"</i>') 
+    // 2. 작은따옴표를 b 태그로 변환 (위 CSS 설정 덕분에 i 안에서는 파란색 b가 됨)
+    .replace(/'([^']*)'/g, '<b>\'$1\'</b>') 
+    .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
+    // 3. 일반 괄호 회색 처리 (숫자 제외)
+    .replace(/\(([^0-9][^)]*)\)/g, '<span class="txt-gray">($1)</span>')
+    .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
+    .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
+    // 4. 주석 처리
+    .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>');
 
             // 3. 변환된 HTML을 노드 단위로 쪼개어 높이 측정
             const tempDiv = document.createElement('div');
