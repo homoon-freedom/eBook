@@ -22,10 +22,16 @@
         .page { min-width: var(--p-width); height: 100%; padding: 10vh 10vw 8vh 10vw; box-sizing: border-box; position: relative; color: var(--text-color); }
         .page-content { font-size: var(--font-size); line-height: 1.8; text-align: justify; word-break: break-all; white-space: pre-wrap; }
 
-        /* --- 스타일 규칙 --- */
-        .page-content i { color: #3498db; font-style: italic; opacity: 0.9; } /* 큰따옴표 파란색 */
-        .page-content b { font-weight: bold; color: inherit; } /* 작은따옴표 굵게 (색상은 부모상속) */
-        .txt-gray { color: #999; font-size: 0.95em; } /* 일반 괄호 회색 */
+        /* --- 스타일 규칙 (수정됨) --- */
+        /* 따옴표 스타일 (i 태그) */
+        .page-content i { color: #3498db; font-style: italic; opacity: 0.9; } 
+        /* 따옴표(i) 내부의 모든 요소는 부모의 파란색을 그대로 상속받음 */
+        .page-content i * { color: inherit !important; font-style: inherit !important; }
+        
+        /* 일반 굵게 및 회색 (따옴표 밖에서만 작동) */
+        .page-content b { font-weight: bold; } 
+        .txt-gray { color: #999; font-size: 0.95em; } 
+
         .txt-bold { font-weight: bold; }
         .txt-list-line { font-weight: bold; font-size: 1.15em; color: #000; display: block; margin: 10px 0 5px 0; }
         .txt-list-bold { font-weight: bold; display: block; margin: 5px 0; }
@@ -44,14 +50,17 @@
         .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
         #library-modal { width: min(500px, 85%); }
-        #bookmark-modal { width: min(400px, 80%); }
-        
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: none; font-size: 15px}
         #anno-viewer-popup { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 15px; z-index: 2000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
-        
         #temp-measurer { width: calc(var(--p-width) - 20vw); font-size: var(--font-size); line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all; }
-        #setting-modal { width: 95vw; height: 90vh; flex-direction: column; }
-        #setting-modal textarea { flex: 1; min-height: 400px; margin-bottom: 15px; font-size: 16px; line-height: 1.6; }
+#setting-modal textarea {
+    flex: 1;            /* 부모 컨테이너의 남은 높이를 모두 점유 (자동 조절) */
+    height: auto;       /* 고정 높이 해제 */
+    min-height: 400px;  /* ← 이 부분의 숫자를 키우면 최소 높이가 높아집니다 */
+    margin-bottom: 15px;
+    font-size: 16px;
+    line-height: 1.6;
+}
     </style>
 </head>
 <body>
@@ -85,12 +94,12 @@
         </div>
     </div>
 
-    <!-- 모달창들 (TOC, Library, Settings, Bookmark, Anno) -->
+    <!-- 모달창 생략 (구조 동일) -->
     <div id="toc-modal" class="modal"><h3>📖 목차</h3><div id="toc-list-container"></div><button class="btn-action" onclick="closeModal('toc-modal')">닫기</button></div>
     <div id="library-modal" class="modal"><h3>📚 내 서재</h3><div id="book-list-container"></div><button class="btn-action" onclick="closeModal('library-modal')">닫기</button></div>
     <div id="setting-modal" class="modal">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;"><h2>🎨 편집</h2><button onclick="prepareNewBook()" style="background:#27ae60; color:white; border:none; padding:10px; border-radius:5px;">+ 새 도서</button></div>
-        <input type="text" id="book-title" placeholder="제목" style="margin-bottom:10px; padding:10px; border-radius:5px; border:1px solid #ddd;">
+        <input type="text" id="book-title" placeholder="제목" style="margin-bottom:10px; padding:10px; border-radius:5px; border:1px solid #ddd; width:100%;">
         <textarea id="editor" placeholder="내용..."></textarea>
         <button class="btn-action" onclick="handleSave()">💾 저장</button>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">닫기</button>
@@ -121,7 +130,7 @@
 
         async function renderBook() {
             return new Promise((resolve) => {
-                const raw = document.getElementById('editor').value || "도서를 로드하거나 작성하세요.";
+                const raw = document.getElementById('editor').value || "내용을 입력하세요.";
                 const maxH = document.querySelector('.book-viewport').offsetHeight * 0.8;
                 const viewer = document.getElementById('viewer-container');
                 const temp = document.getElementById('temp-measurer');
@@ -133,15 +142,20 @@
                 sections.forEach((section, sIdx) => {
                     if (section.trim() === "" && sIdx !== 0) return;
 
+                    // 변환 로직 (순서 중요)
                     let html = section
                         .replace(/^### (.*$)/gm, '<strong style="display:block; font-size:1.4em; margin:20px 0; color:#2c3e50; border-left:4px solid #3498db; padding-left:10px;">$1</strong>')
+                        // 1. 큰따옴표 우선 변환 (내부 요소를 모두 파란색으로 만들기 위해 가장 먼저 처리)
                         .replace(/"([^"]*)"/g, '<i>"$1"</i>')
+                        // 2. 작은따옴표 변환
                         .replace(/'([^']*)'/g, '<b>\'$1\'</b>')
-                        .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
+                        // 3. 괄호 처리 (숫자 괄호는 제외)
                         .replace(/\(([^0-9][^)]*)\)/g, '<span class="txt-gray">($1)</span>')
+                        // 4. 주석 처리 (숫자 괄호)
+                        .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>')
+                        .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
                         .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
-                        .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
-                        .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>');
+                        .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>');
 
                     const wrapper = document.createElement('div');
                     wrapper.innerHTML = html;
@@ -176,16 +190,31 @@
             document.getElementById('viewer-container').appendChild(div);
         }
 
-        function movePage(dir) {
-            let n = currentIndex + dir;
-            if (n >= 0 && n < totalPages) { currentIndex = n; updateSlider(); }
-        }
-
         function updateSlider() {
             const w = document.querySelector('.book-viewport').offsetWidth;
             document.getElementById('viewer-container').style.transform = `translateX(${-currentIndex * w}px)`;
             document.getElementById('page-indicator').innerText = `${currentIndex + 1} / ${totalPages}`;
             localStorage.setItem('eb_lastPage', currentIndex);
+        }
+
+        function movePage(dir) {
+            let n = currentIndex + dir;
+            if (n >= 0 && n < totalPages) { currentIndex = n; updateSlider(); }
+        }
+
+        function goToPage(idx) { currentIndex = idx; updateSlider(); }
+
+        async function handleSave() {
+            const title = document.getElementById('book-title').value;
+            const content = document.getElementById('editor').value;
+            const data = { title, content, annotations: currentAnnotations, bookmarks: currentBookmarks };
+            if (currentBookId) await _supabase.from('ebooks').update(data).eq('id', currentBookId);
+            else {
+                const res = await _supabase.from('ebooks').insert([data]).select();
+                if (res.data) currentBookId = res.data[0].id;
+            }
+            alert("저장되었습니다.");
+            renderBook();
         }
 
         async function loadBook(id, page = 0) {
@@ -203,19 +232,6 @@
             }
         }
 
-        async function handleSave() {
-            const title = document.getElementById('book-title').value;
-            const content = document.getElementById('editor').value;
-            const data = { title, content, annotations: currentAnnotations, bookmarks: currentBookmarks };
-            if (currentBookId) await _supabase.from('ebooks').update(data).eq('id', currentBookId);
-            else {
-                const res = await _supabase.from('ebooks').insert([data]).select();
-                if (res.data) currentBookId = res.data[0].id;
-            }
-            alert("저장되었습니다.");
-            renderBook();
-        }
-
         function openModal(id) { document.getElementById(id).style.display = 'block'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function applyFontSizeEffect() { document.documentElement.style.setProperty('--font-size', currentFontSize + 'px'); document.getElementById('font-size-val').innerText = currentFontSize; }
@@ -224,17 +240,26 @@
         function toggleBookmark() { if(currentBookmarks.includes(currentIndex)) currentBookmarks = currentBookmarks.filter(v => v !== currentIndex); else currentBookmarks.push(currentIndex); handleSave(); }
         function promptPageJump() { const p = prompt("이동할 페이지:"); if(p) { currentIndex = parseInt(p)-1; updateSlider(); } }
         function openLibrary() { openModal('library-modal'); _supabase.from('ebooks').select('id, title').then(res => {
-            document.getElementById('book-list-container').innerHTML = res.data.map(b => `<div style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;" onclick="loadBook('${b.id}')">${b.title}</div>`).join('');
+            document.getElementById('book-list-container').innerHTML = res.data.map(b => `<div style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="loadBook('${b.id}')">📘 ${b.title}</div>`).join('');
         });}
         function generateTOC() {
             const items = document.getElementById('editor').value.split('\n').filter(l => l.startsWith('###')).map(l => l.replace('###','').trim());
-            document.getElementById('toc-list-container').innerHTML = items.map(i => `<div style="padding:10px; cursor:pointer;" onclick="closeModal('toc-modal')">${i}</div>`).join('');
+            document.getElementById('toc-list-container').innerHTML = items.map(i => `<div style="padding:15px; cursor:pointer; border-bottom:1px solid #eee;" onclick="closeModal('toc-modal')">📍 ${i}</div>`).join('');
             openModal('toc-modal');
         }
         function openAnnotation(n, e) {
             e.stopPropagation();
             document.getElementById('anno-viewer-text').innerText = currentAnnotations[n] || "내용 없음";
             document.getElementById('anno-viewer-popup').style.display = 'block';
+        }
+        function openAllAnnotations() {
+            const keys = Object.keys(currentAnnotations).sort((a,b)=>a-b);
+            document.getElementById('all-anno-list-container').innerHTML = keys.map(k => `<div style="padding:10px; border-bottom:1px solid #eee;">(${k}) ${currentAnnotations[k]}</div>`).join('') || "등록된 주석이 없습니다.";
+            openModal('all-annotations-modal');
+        }
+        function openBookmarks() {
+            document.getElementById('bookmark-list-container').innerHTML = currentBookmarks.map(p => `<div style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="goToPage(${p}); closeModal('bookmark-modal');">🔖 페이지 ${p+1}</div>`).join('') || "북마크가 없습니다.";
+            openModal('bookmark-modal');
         }
 
         let startX = 0;
