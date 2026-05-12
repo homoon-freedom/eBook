@@ -48,6 +48,12 @@
             margin: 5px 0;
         }
 
+        /* 괄호 안의 텍스트 스타일: 연한 회색 */
+.txt-gray {
+    color: #999; /* 혹은 원하는 회색 톤 (#888, #aaa 등) */
+    font-size: 0.95em; /* 살짝 작게 하면 더 부드러워 보입니다 (선택 사항) */
+}
+
         .book-info { position: absolute; width: 80%; left: 10%; opacity: 0.7; font-size: 13px; z-index: 100; color: var(--text-color); display: flex; justify-content: space-between; align-items: center; }
         .book-header { top: 3vh; padding-bottom: 8px; border-bottom: 1.5px solid var(--line-color); }
         .book-footer { bottom: 2.5vh; padding-top: 8px; border-top: 1.5px solid var(--line-color); }
@@ -579,6 +585,7 @@ function openAllAnnotations(highlightNum = null) {
                 .replace(/"([^"]*)"/g, '<i class="quote-style">"$1"</i>') 
                 .replace(/'([^']*)'/g, '<b>\'$1\'</b>')
                 .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
+                .replace(/\(([^0-9][^)]*)\)/g, '<span class="txt-gray">($1)</span>')
                 .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
                 .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
                 .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>');
