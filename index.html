@@ -153,12 +153,12 @@
     text-decoration-style: solid;
 }
 
-        /* 따옴표 스타일 클래스 */
+/* 따옴표 스타일: 파란색 + 이탤릭 */
 .page-content .quote-style {
     color: #3498db;
     font-style: italic;
     opacity: 0.9;
-    display: inline; /* 페이지가 넘어가도 끊기지 않도록 설정 */
+    display: inline;
 }
 
 /* 임시 측정기 스타일 보정 */
@@ -171,15 +171,14 @@
 }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: none; font-size: 15px}
         #anno-viewer-popup { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 15px; z-index: 2000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
-        #temp-measurer {
-    width: calc(var(--p-width) - 20vw); /* 실제 .page-content와 동일한 패딩 제외 너비 */
+#temp-measurer {
+    width: calc(var(--p-width) - 20vw);
     font-size: var(--font-size);
     line-height: 1.8;
     visibility: hidden;
     position: absolute;
     white-space: pre-wrap;
     word-break: break-all;
-    padding: 0; /* 측정기 내부 패딩은 0으로 설정하여 순수 텍스트 높이만 측정 */
 }
 
 /* 기존 .modal 스타일은 유지하고 아래 내용을 추가하거나 수정하세요 */
@@ -563,71 +562,65 @@ function openAllAnnotations(highlightNum = null) {
         const maxH = document.querySelector('.book-viewport').offsetHeight * 0.8;
         viewerContainer.innerHTML = "";
 
-        // 1. 전체 텍스트를 먼저 HTML로 변환 (따옴표가 페이지에 걸쳐도 태그는 유지됨)
+        // 1. {p}를 기준으로 섹션을 먼저 나눕니다.
         const sections = raw.split('{p}');
-        let allFormattedHTML = sections.map((section, sIdx) => {
-            if (section.trim() === "" && sIdx !== 0) return "";
-            
-            return section
+        let pageNum = 0;
+
+        // 임시 측정용 컨테이너
+        const temp = document.getElementById('temp-measurer');
+        
+        sections.forEach((section, sIdx) => {
+            // 빈 섹션 처리 (첫 섹션 제외)
+            if (section.trim() === "" && sIdx !== 0) return;
+
+            // 2. 섹션 내 텍스트를 HTML로 변환 (따옴표 스타일 포함)
+            let formattedHTML = section
                 .replace(/^### (.*$)/gm, '<strong style="display:block; font-size:1.4em; margin: 20px 0 10px 0; color:#2c3e50; border-left:4px solid #3498db; padding-left:10px;">$1</strong>')
-                .replace(/"([^"]*)"/g, '<i class="quote-style">"$1"</i>') // 클래스 방식으로 변경
+                .replace(/"([^"]*)"/g, '<i class="quote-style">"$1"</i>') 
                 .replace(/'([^']*)'/g, '<b>\'$1\'</b>')
                 .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
                 .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
                 .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
                 .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>');
-        }).join('<div class="section-divider"></div>'); // 섹션 구분자
 
-        // 2. 임시 측정기에 전체 HTML 주입
-        const temp = document.getElementById('temp-measurer');
-        temp.innerHTML = allFormattedHTML;
-        
-        // 3. 노드들을 순회하며 페이지에 분배
-        let pageNum = 0;
-        let currentHTML = "";
-        const tempContainer = document.createElement('div');
-        
-        // 모든 자식 노드(텍스트 포함)를 하나씩 검사
-        const nodes = Array.from(temp.childNodes);
-        temp.innerHTML = ""; // 측정기 비우기
+            // 3. 변환된 HTML을 노드 단위로 쪼개어 높이 측정
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = formattedHTML;
+            const nodes = Array.from(tempDiv.childNodes);
 
-        nodes.forEach((node) => {
-            const clone = node.cloneNode(true);
-            temp.appendChild(clone);
+            let currentHTML = "";
+            temp.innerHTML = "";
 
-            if (temp.offsetHeight > maxH) {
-                // 현재 노드를 넣었을 때 넘어가면, 이전까지의 내용을 페이지로 생성
-                if (currentHTML.trim() !== "") {
+            nodes.forEach((node) => {
+                const clone = node.cloneNode(true);
+                temp.appendChild(clone);
+
+                // 높이가 초과되면 페이지 분리
+                if (temp.offsetHeight > maxH && currentHTML !== "") {
                     addPage(currentHTML);
                     pageNum++;
-                }
-                
-                // 만약 섹션 구분자라면 페이지 내용 비우기
-                if (clone.className === "section-divider") {
-                    currentHTML = "";
+                    
+                    // 새 페이지는 현재 노드부터 다시 시작
+                    temp.innerHTML = "";
+                    temp.appendChild(clone);
+                    currentHTML = temp.innerHTML;
                 } else {
-                    currentHTML = (node.nodeType === 3) ? node.textContent : node.outerHTML;
+                    currentHTML = temp.innerHTML;
                 }
-                temp.innerHTML = currentHTML;
-            } else {
-                currentHTML = temp.innerHTML;
+            });
+
+            // 4. 섹션(또는 {p})이 끝날 때 남은 내용이 있다면 페이지 추가
+            if (currentHTML.trim() !== "") {
+                addPage(currentHTML);
+                pageNum++;
             }
         });
-
-        // 마지막 남은 부분 추가
-        if (currentHTML.trim() !== "") {
-            addPage(currentHTML);
-            pageNum++;
-        }
 
         totalPages = pageNum;
         document.getElementById('display-title').innerText = document.getElementById('book-title').value || "제목 없음";
         resolve();
     });
 }
-
-
-
         function addPage(content) {
             const div = document.createElement('div'); div.className = 'page';
             div.innerHTML = `<div class="page-content">${content}</div>`;
