@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>기적수업 정리노트</title>
+    <title>LocalStorage eBook Manager Professional</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -22,16 +22,11 @@
         .page { min-width: var(--p-width); height: 100%; padding: 10vh 10vw 8vh 10vw; box-sizing: border-box; position: relative; color: var(--text-color); }
         .page-content { font-size: var(--font-size); line-height: 1.8; text-align: justify; word-break: break-all; white-space: pre-wrap; }
 
-        /* --- 스타일 규칙 (수정됨) --- */
-        /* 따옴표 스타일 (i 태그) */
+        /* 스타일 규칙 */
         .page-content i { color: #3498db; font-style: italic; opacity: 0.9; } 
-        /* 따옴표(i) 내부의 모든 요소는 부모의 파란색을 그대로 상속받음 */
         .page-content i * { color: inherit !important; font-style: inherit !important; }
-        
-        /* 일반 굵게 및 회색 (따옴표 밖에서만 작동) */
         .page-content b { font-weight: bold; } 
         .txt-gray { color: #999; font-size: 0.95em; } 
-
         .txt-bold { font-weight: bold; }
         .txt-list-line { font-weight: bold; font-size: 1.15em; color: #000; display: block; margin: 10px 0 5px 0; }
         .txt-list-bold { font-weight: bold; display: block; margin: 5px 0; }
@@ -41,7 +36,6 @@
         .book-footer { bottom: 2.5vh; padding-top: 8px; border-top: 1.5px solid var(--line-color); }
         
         #page-indicator { cursor: pointer; font-weight: bold; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,0.05); }
-        .sup-highlight { font-size: 0.75em; vertical-align: super; line-height: 0; margin-left: 2px; color: #3498db; cursor: pointer; font-weight: bold; text-decoration: underline; }
         
         .bottom-menu { display: flex; gap: 5px; justify-content: center; width: 100%; flex-wrap: wrap; }
         .bottom-btn { padding: 8px 14px; border-radius: 50px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; font-size: 12px; font-weight: bold; }
@@ -50,17 +44,9 @@
         .btn-action { width: 100%; padding: 15px; background: #3498db; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
         #library-modal { width: min(500px, 85%); }
-        textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: none; font-size: 15px}
-        #anno-viewer-popup { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 400px; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 15px; z-index: 2000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(5px); }
+        #book-title { margin-bottom: 10px; padding: 15px; border-radius: 8px; border: 1px solid #ddd; width: 100%; box-sizing: border-box; font-size: 15px; font-weight: bold; }
+        #editor { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: none; font-size: 15px; line-height: 1.6; min-height: 400px; flex: 1; }
         #temp-measurer { width: calc(var(--p-width) - 20vw); font-size: var(--font-size); line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all; }
-#setting-modal textarea {
-    flex: 1;            /* 부모 컨테이너의 남은 높이를 모두 점유 (자동 조절) */
-    height: auto;       /* 고정 높이 해제 */
-    min-height: 400px;  /* ← 이 부분의 숫자를 키우면 최소 높이가 높아집니다 */
-    margin-bottom: 15px;
-    font-size: 16px;
-    line-height: 1.6;
-}
     </style>
 </head>
 <body>
@@ -72,10 +58,10 @@
             <div class="book-info book-header">
                 <span id="display-title">불러온 도서 없음</span>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <button class="btn-small" onclick="changeFontSize(-1)">가-</button>
+                    <button onclick="changeFontSize(-1)">가-</button>
                     <span id="font-size-val">17</span>
-                    <button class="btn-small" onclick="changeFontSize(1)">가+</button>
-                    <button class="btn-small btn-blue" onclick="toggleBookmark()">🔖</button>
+                    <button onclick="changeFontSize(1)">가+</button>
+                    <button onclick="toggleBookmark()">🔖</button>
                 </div>
             </div>
             <div id="viewer-container" class="book-container"></div>
@@ -88,29 +74,22 @@
         <div class="bottom-menu">
             <button class="bottom-btn" onclick="openLibrary()">📚 서재</button>
             <button class="bottom-btn" onclick="generateTOC()">📖 목차</button>
-            <button class="bottom-btn" onclick="openAllAnnotations()">📑 주석</button>
             <button class="bottom-btn" onclick="openBookmarks()">🔖 북마크</button>
             <button class="bottom-btn" onclick="openModal('setting-modal')">🎨 편집</button>
         </div>
     </div>
 
-    <!-- 모달창 생략 (구조 동일) -->
     <div id="toc-modal" class="modal"><h3>📖 목차</h3><div id="toc-list-container"></div><button class="btn-action" onclick="closeModal('toc-modal')">닫기</button></div>
     <div id="library-modal" class="modal"><h3>📚 내 서재</h3><div id="book-list-container"></div><button class="btn-action" onclick="closeModal('library-modal')">닫기</button></div>
     <div id="setting-modal" class="modal">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;"><h2>🎨 편집</h2><button onclick="prepareNewBook()" style="background:#27ae60; color:white; border:none; padding:10px; border-radius:5px;">+ 새 도서</button></div>
-        <input type="text" id="book-title" placeholder="제목" style="margin-bottom:10px; padding:10px; border-radius:5px; border:1px solid #ddd; width:100%;">
+        <input type="text" id="book-title" placeholder="제목">
         <textarea id="editor" placeholder="내용..."></textarea>
         <button class="btn-action" onclick="handleSave()">💾 저장</button>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">닫기</button>
     </div>
     <div id="bookmark-modal" class="modal"><h3>🔖 북마크</h3><div id="bookmark-list-container"></div><button class="btn-action" onclick="closeModal('bookmark-modal')">닫기</button></div>
-    <div id="all-annotations-modal" class="modal"><h3>📑 주석 관리</h3><div id="all-anno-list-container"></div><button class="btn-action" onclick="closeModal('all-annotations-modal')">닫기</button></div>
     
-    <div id="anno-viewer-popup">
-        <div id="anno-viewer-text"></div>
-        <div style="text-align:right; margin-top:10px;"><span id="go-to-edit-btn" style="color:#3498db; cursor:pointer;">수정</span> <span onclick="document.getElementById('anno-viewer-popup').style.display='none'" style="margin-left:15px; cursor:pointer;">닫기</span></div>
-    </div>
     <div id="temp-measurer"></div>
 
     <script>
@@ -118,13 +97,15 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtZGxhd25td2tvdHh2b2lldWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMzg3NjgsImV4cCI6MjA5MzYxNDc2OH0.P3H0Gob_HFjCtz12b_KGEyC-tCWHijEyH-9SHPKAVDM';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let currentIndex = 0, totalPages = 1, currentFontSize = 17, currentBookId = null, currentAnnotations = {}, currentBookmarks = [];
+        let currentIndex = 0, totalPages = 1, currentFontSize = 17, currentBookId = null, currentBookmarks = [];
+        let tocMap = [];
 
         async function init() {
             const savedSize = localStorage.getItem('eb_fontSize');
             if(savedSize) { currentFontSize = parseInt(savedSize); applyFontSizeEffect(); }
             const lastBookId = localStorage.getItem('eb_lastBookId');
-            if(lastBookId) await loadBook(lastBookId, parseInt(localStorage.getItem('eb_lastPage') || 0));
+            const lastPage = parseInt(localStorage.getItem('eb_lastPage') || 0);
+            if(lastBookId) await loadBook(lastBookId, lastPage);
             else renderBook();
         }
 
@@ -134,49 +115,78 @@
                 const maxH = document.querySelector('.book-viewport').offsetHeight * 0.8;
                 const viewer = document.getElementById('viewer-container');
                 const temp = document.getElementById('temp-measurer');
-                viewer.innerHTML = "";
                 
-                const sections = raw.split('{p}');
+                viewer.innerHTML = "";
+                temp.innerHTML = "";
+                tocMap = [];
                 let pCount = 0;
 
-                sections.forEach((section, sIdx) => {
-                    if (section.trim() === "" && sIdx !== 0) return;
+                const lines = raw.split('\n');
+                let processedLines = [];
+                
+                lines.forEach(line => {
+                    if (line.trim().startsWith('{l}')) {
+                        tocMap.push({ title: line.replace('{l}', '').trim(), page: pCount });
+                    } else {
+                        processedLines.push(line);
+                    }
+                });
 
-                    // 변환 로직 (순서 중요)
-                    let html = section
-                        .replace(/^### (.*$)/gm, '<strong style="display:block; font-size:1.4em; margin:20px 0; color:#2c3e50; border-left:4px solid #3498db; padding-left:10px;">$1</strong>')
-                        // 1. 큰따옴표 우선 변환 (내부 요소를 모두 파란색으로 만들기 위해 가장 먼저 처리)
-                        .replace(/"([^"]*)"/g, '<i>"$1"</i>')
-                        // 2. 작은따옴표 변환
-                        .replace(/'([^']*)'/g, '<b>\'$1\'</b>')
-                        // 3. 괄호 처리 (숫자 괄호는 제외)
-                        .replace(/\(([^0-9][^)]*)\)/g, '<span class="txt-gray">($1)</span>')
-                        // 4. 주석 처리 (숫자 괄호)
-                        .replace(/\((\d+)\)(\S*)/g, '<span class="anno-clickable-group" onclick="openAnnotation($1, event)"><span class="sup-highlight">$1</span><span class="anno-text-link">$2</span></span>')
-                        .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
-                        .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
-                        .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>');
+                let processedHTML = processedLines.join('\n')
+                    .replace(/"([^"]*)"/g, '<i>"$1"</i>')
+                    .replace(/'([^']*)'/g, '<b>\'$1\'</b>')
+                    .replace(/\(([^0-9][^)]*)\)/g, '<span class="txt-gray">($1)</span>')
+                    .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
+                    .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
+                    .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>');
 
-                    const wrapper = document.createElement('div');
-                    wrapper.innerHTML = html;
-                    const nodes = Array.from(wrapper.childNodes);
-                    
-                    let currentHTML = "";
-                    temp.innerHTML = "";
+                const sections = processedHTML.split('{p}');
+
+                sections.forEach((section, idx) => {
+                    if (idx > 0 && temp.innerHTML.trim() !== "") {
+                        addPage(temp.innerHTML);
+                        pCount++;
+                        temp.innerHTML = "";
+                    }
+
+                    const sectionWrapper = document.createElement('div');
+                    sectionWrapper.innerHTML = section;
+                    const nodes = Array.from(sectionWrapper.childNodes);
 
                     nodes.forEach(node => {
-                        const clone = node.cloneNode(true);
-                        temp.appendChild(clone);
-                        if (temp.offsetHeight > maxH && currentHTML !== "") {
-                            addPage(currentHTML);
-                            pCount++;
-                            temp.innerHTML = "";
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            const text = node.textContent;
+                            for (let i = 0; i < text.length; i++) {
+                                temp.innerHTML += text[i];
+                                if (temp.offsetHeight > maxH) {
+                                    const lastChar = temp.innerHTML.slice(-1);
+                                    temp.innerHTML = temp.innerHTML.slice(0, -1);
+                                    addPage(temp.innerHTML);
+                                    pCount++;
+                                    temp.innerHTML = lastChar;
+                                }
+                            }
+                        } else {
+                            const clone = node.cloneNode(true);
                             temp.appendChild(clone);
+                            if (temp.offsetHeight > maxH) {
+                                temp.removeChild(clone);
+                                if (temp.innerHTML.trim() !== "") {
+                                    addPage(temp.innerHTML);
+                                    pCount++;
+                                }
+                                temp.innerHTML = "";
+                                temp.appendChild(clone);
+                            }
                         }
-                        currentHTML = temp.innerHTML;
                     });
-                    if (currentHTML.trim() !== "") { addPage(currentHTML); pCount++; }
                 });
+
+                if (temp.innerHTML.trim() !== "") {
+                    addPage(temp.innerHTML);
+                    pCount++;
+                }
+
                 totalPages = pCount || 1;
                 document.getElementById('page-indicator').innerText = `${currentIndex + 1} / ${totalPages}`;
                 resolve();
@@ -188,6 +198,17 @@
             div.className = 'page';
             div.innerHTML = `<div class="page-content">${content}</div>`;
             document.getElementById('viewer-container').appendChild(div);
+        }
+
+        function generateTOC() {
+            let tocHTML = tocMap.map(item => `
+                <div style="padding:15px; cursor:pointer; border-bottom:1px solid #eee;" 
+                     onclick="goToPage(${item.page}); closeModal('toc-modal');">
+                    📍 ${item.title} <span style="float:right; color:#999; font-size:12px;">p.${item.page + 1}</span>
+                </div>
+            `).join('');
+            document.getElementById('toc-list-container').innerHTML = tocHTML || "<div style='padding:20px; color:#999;'>목차가 없습니다.</div>";
+            openModal('toc-modal');
         }
 
         function updateSlider() {
@@ -202,12 +223,15 @@
             if (n >= 0 && n < totalPages) { currentIndex = n; updateSlider(); }
         }
 
-        function goToPage(idx) { currentIndex = idx; updateSlider(); }
+        function goToPage(idx) { 
+            currentIndex = (idx >= totalPages) ? totalPages - 1 : idx;
+            updateSlider(); 
+        }
 
         async function handleSave() {
             const title = document.getElementById('book-title').value;
             const content = document.getElementById('editor').value;
-            const data = { title, content, annotations: currentAnnotations, bookmarks: currentBookmarks };
+            const data = { title, content, bookmarks: currentBookmarks };
             if (currentBookId) await _supabase.from('ebooks').update(data).eq('id', currentBookId);
             else {
                 const res = await _supabase.from('ebooks').insert([data]).select();
@@ -221,9 +245,9 @@
             const { data } = await _supabase.from('ebooks').select('*').eq('id', id).single();
             if (data) {
                 currentBookId = data.id;
+                localStorage.setItem('eb_lastBookId', id);
                 document.getElementById('book-title').value = data.title;
                 document.getElementById('editor').value = data.content;
-                currentAnnotations = data.annotations || {};
                 currentBookmarks = data.bookmarks || [];
                 document.getElementById('display-title').innerText = data.title;
                 await renderBook();
@@ -232,44 +256,53 @@
             }
         }
 
+        async function openLibrary() { 
+            openModal('library-modal'); 
+            const { data } = await _supabase.from('ebooks').select('id, title');
+            document.getElementById('book-list-container').innerHTML = data.map(b => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee;">
+                    <div style="cursor:pointer; flex:1;" onclick="loadBook('${b.id}'); closeModal('library-modal');">📘 ${b.title}</div>
+                    <button onclick="deleteBook('${b.id}', '${b.title}')" style="background:#e74c3c; color:white; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:12px;">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteBook(id, title) {
+            if (!confirm(`'${title}'을 삭제하시겠습니까?`)) return;
+            await _supabase.from('ebooks').delete().eq('id', id);
+            if (currentBookId === id) location.reload();
+            else openLibrary();
+        }
+
         function openModal(id) { document.getElementById(id).style.display = 'block'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function applyFontSizeEffect() { document.documentElement.style.setProperty('--font-size', currentFontSize + 'px'); document.getElementById('font-size-val').innerText = currentFontSize; }
-        function changeFontSize(d) { currentFontSize += d; applyFontSizeEffect(); renderBook().then(updateSlider); }
+        
+        function applyFontSizeEffect() { 
+            const size = currentFontSize + 'px';
+            document.documentElement.style.setProperty('--font-size', size); 
+            document.getElementById('font-size-val').innerText = currentFontSize;
+        }
+
+        function changeFontSize(d) { 
+            currentFontSize += d; 
+            localStorage.setItem('eb_fontSize', currentFontSize);
+            applyFontSizeEffect(); 
+            renderBook().then(updateSlider); 
+        }
+
         function prepareNewBook() { currentBookId = null; document.getElementById('book-title').value = ""; document.getElementById('editor').value = ""; renderBook(); }
-        function toggleBookmark() { if(currentBookmarks.includes(currentIndex)) currentBookmarks = currentBookmarks.filter(v => v !== currentIndex); else currentBookmarks.push(currentIndex); handleSave(); }
+        function toggleBookmark() { 
+            if(currentBookmarks.includes(currentIndex)) currentBookmarks = currentBookmarks.filter(v => v !== currentIndex); 
+            else currentBookmarks.push(currentIndex); 
+            handleSave(); 
+        }
+
         function promptPageJump() { const p = prompt("이동할 페이지:"); if(p) { currentIndex = parseInt(p)-1; updateSlider(); } }
-function openLibrary() {
-    openModal('library-modal');
-    _supabase.from('ebooks').select('id, title').then(res => {
-        document.getElementById('book-list-container').innerHTML = res.data.map(b => `
-            <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <div style="cursor:pointer; flex:1;" onclick="loadBook('${b.id}')">📘 ${b.title}</div>
-                <button onclick="deleteBook('${b.id}', '${b.title}')" 
-                        style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:18px; padding:5px 10px;">
-                    🗑️
-                </button>
-            </div>
-        `).join('');
-    });
-}
-        function generateTOC() {
-            const items = document.getElementById('editor').value.split('\n').filter(l => l.startsWith('###')).map(l => l.replace('###','').trim());
-            document.getElementById('toc-list-container').innerHTML = items.map(i => `<div style="padding:15px; cursor:pointer; border-bottom:1px solid #eee;" onclick="closeModal('toc-modal')">📍 ${i}</div>`).join('');
-            openModal('toc-modal');
-        }
-        function openAnnotation(n, e) {
-            e.stopPropagation();
-            document.getElementById('anno-viewer-text').innerText = currentAnnotations[n] || "내용 없음";
-            document.getElementById('anno-viewer-popup').style.display = 'block';
-        }
-        function openAllAnnotations() {
-            const keys = Object.keys(currentAnnotations).sort((a,b)=>a-b);
-            document.getElementById('all-anno-list-container').innerHTML = keys.map(k => `<div style="padding:10px; border-bottom:1px solid #eee;">(${k}) ${currentAnnotations[k]}</div>`).join('') || "등록된 주석이 없습니다.";
-            openModal('all-annotations-modal');
-        }
+        
         function openBookmarks() {
-            document.getElementById('bookmark-list-container').innerHTML = currentBookmarks.map(p => `<div style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="goToPage(${p}); closeModal('bookmark-modal');">🔖 페이지 ${p+1}</div>`).join('') || "북마크가 없습니다.";
+            document.getElementById('bookmark-list-container').innerHTML = currentBookmarks.map(p => `
+                <div style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="goToPage(${p}); closeModal('bookmark-modal');">🔖 페이지 ${p+1}</div>
+            `).join('') || "북마크가 없습니다.";
             openModal('bookmark-modal');
         }
 
