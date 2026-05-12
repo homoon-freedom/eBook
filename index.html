@@ -238,13 +238,14 @@
                 <span onclick="this.parentElement.parentElement.style.display='none'" style="margin-left:15px; font-size:12px; cursor:pointer; opacity:0.7;">닫기</span>
             </div>
         </div>
-
-        <div class="bottom-menu">
-            <button class="bottom-btn" onclick="openLibrary()">📚 서재</button>
-            <button class="bottom-btn" onclick="openAllAnnotations()">📑 주석</button>
-            <button class="bottom-btn" onclick="openBookmarks()">🔖 북마크</button>
-            <button class="bottom-btn" onclick="openModal('setting-modal')">🎨 편집</button>
-        </div>
+<!-- 기존 버튼들 사이에 추가 -->
+<div class="bottom-menu">
+    <button class="bottom-btn" onclick="openLibrary()">📚 서재</button>
+    <button class="bottom-btn" onclick="generateTOC()">📖 목차</button> <!-- 추가 -->
+    <button class="bottom-btn" onclick="openAllAnnotations()">📑 주석</button>
+    <button class="bottom-btn" onclick="openBookmarks()">🔖 북마크</button>
+    <button class="bottom-btn" onclick="openModal('setting-modal')">🎨 편집</button>
+</div>
     </div>
 
     <!-- 모달 등 나머지 구조 유지 -->
@@ -258,6 +259,13 @@
         <div id="bookmark-list-container"></div>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('bookmark-modal')">닫기</button>
     </div>
+    <div id="toc-modal" class="modal">
+    <h3 style="margin-top:0;">📖 목차</h3>
+    <div id="toc-list-container" style="max-height: 50vh; overflow-y: auto;">
+        <!-- 목차 아이템이 여기에 생성됨 -->
+    </div>
+    <button class="btn-action" style="background:#95a5a6; margin-top: 20px;" onclick="closeModal('toc-modal')">닫기</button>
+</div>
     <div id="library-modal" class="modal">
         <h3>📚 내 서재</h3>
         <div id="book-list-container"></div>
@@ -413,6 +421,56 @@ function openBookmarks() {
             popup.style.display = 'block';
         }
 
+        // 목차 생성 및 모달 열기
+function generateTOC() {
+    const content = document.getElementById('editor').value;
+    const container = document.getElementById('toc-list-container');
+    
+    // 본문에서 "### 제목" 패턴 추출
+    const lines = content.split('\n');
+    const tocItems = [];
+    
+    // 전체 페이지를 렌더링할 때 사용했던 토큰 구조와 유사하게 위치 추적
+    // 여기서는 간단하게 해당 텍스트가 포함된 섹션/페이지를 찾아갑니다.
+    lines.forEach((line) => {
+        if (line.trim().startsWith('###')) {
+            const title = line.replace('###', '').trim();
+            tocItems.push(title);
+        }
+    });
+
+    if (tocItems.length === 0) {
+        container.innerHTML = "<p style='text-align:center; padding:20px;'>설정된 목차가 없습니다.<br><small>(본문에 '### 제목' 형식을 사용하세요)</small></p>";
+    } else {
+        container.innerHTML = tocItems.map(title => `
+            <div class="bookmark-item" onclick="goToTocTitle('${title}')">
+                <span>📍 ${title}</span>
+            </div>
+        `).join('');
+    }
+    
+    openModal('toc-modal');
+}
+
+// 특정 목차 제목이 있는 페이지로 이동
+function goToTocTitle(title) {
+    const pages = document.querySelectorAll('.page');
+    let targetPageIndex = -1;
+
+    pages.forEach((page, index) => {
+        if (page.innerText.includes(title) && targetPageIndex === -1) {
+            targetPageIndex = index;
+        }
+    });
+
+    if (targetPageIndex !== -1) {
+        goToPage(targetPageIndex);
+        closeModal('toc-modal');
+    } else {
+        alert("해당 위치를 찾을 수 없습니다.");
+    }
+}
+
 function openAllAnnotations(highlightNum = null) {
     const container = document.getElementById('all-anno-list-container');
     const content = document.getElementById('editor').value;
@@ -482,6 +540,8 @@ function openAllAnnotations(highlightNum = null) {
 
                     // 텍스트 변환 로직 (기존 스타일 유지)
                     let formatted = section
+                        .replace(/^### (.*$)/gm, '<strong style="display:block; font-size:1.4em; margin: 20px 0 10px 0; color:#2c3e50; border-left:4px solid #3498db; padding-left:10px;">$1</strong>') // 목차 스타일 추가
+                        .replace(/"([^"]*)"/g, '<i style="font-style: italic; opacity: 0.9;">"$1"</i>') // 따옴표 이탤릭 추가
                         .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
                         .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
                         .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
