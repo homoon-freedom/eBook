@@ -239,9 +239,20 @@
         function prepareNewBook() { currentBookId = null; document.getElementById('book-title').value = ""; document.getElementById('editor').value = ""; renderBook(); }
         function toggleBookmark() { if(currentBookmarks.includes(currentIndex)) currentBookmarks = currentBookmarks.filter(v => v !== currentIndex); else currentBookmarks.push(currentIndex); handleSave(); }
         function promptPageJump() { const p = prompt("이동할 페이지:"); if(p) { currentIndex = parseInt(p)-1; updateSlider(); } }
-        function openLibrary() { openModal('library-modal'); _supabase.from('ebooks').select('id, title').then(res => {
-            document.getElementById('book-list-container').innerHTML = res.data.map(b => `<div style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="loadBook('${b.id}')">📘 ${b.title}</div>`).join('');
-        });}
+function openLibrary() {
+    openModal('library-modal');
+    _supabase.from('ebooks').select('id, title').then(res => {
+        document.getElementById('book-list-container').innerHTML = res.data.map(b => `
+            <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <div style="cursor:pointer; flex:1;" onclick="loadBook('${b.id}')">📘 ${b.title}</div>
+                <button onclick="deleteBook('${b.id}', '${b.title}')" 
+                        style="background:none; border:none; color:#e74c3c; cursor:pointer; font-size:18px; padding:5px 10px;">
+                    🗑️
+                </button>
+            </div>
+        `).join('');
+    });
+}
         function generateTOC() {
             const items = document.getElementById('editor').value.split('\n').filter(l => l.startsWith('###')).map(l => l.replace('###','').trim());
             document.getElementById('toc-list-container').innerHTML = items.map(i => `<div style="padding:15px; cursor:pointer; border-bottom:1px solid #eee;" onclick="closeModal('toc-modal')">📍 ${i}</div>`).join('');
