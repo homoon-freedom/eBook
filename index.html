@@ -25,6 +25,10 @@
     color: #3498db; /* 파란색 계열 (주석 하이라이트 색상과 동일하게 설정) */
     /* 원하신다면 다른 파란색 코드를 사용하셔도 됩니다. 예: color: blue; 또는 color: #007bff; */
 }
+        .page-content b {
+    font-weight: bold;
+    color: var(--text-color); /* 혹은 원하는 색상 */
+}
         /* 텍스트 스타일 클래스 */
         .txt-bold { font-weight: bold; }
         
@@ -545,6 +549,7 @@ function openAllAnnotations(highlightNum = null) {
                     let formatted = section
                         .replace(/^### (.*$)/gm, '<strong style="display:block; font-size:1.4em; margin: 20px 0 10px 0; color:#2c3e50; border-left:4px solid #3498db; padding-left:10px;">$1</strong>') // 목차 스타일 추가
                         .replace(/"([^"]*)"/g, '<i style="font-style: italic; opacity: 0.9;">"$1"</i>') // 따옴표 이탤릭 추가
+                        .replace(/'([^']*)'/g, '<b>\'$1\'</b>') 
                         .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
                         .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
                         .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>')
