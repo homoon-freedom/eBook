@@ -31,6 +31,12 @@
         .txt-list-line { font-weight: bold; font-size: 1.15em; color: #000; display: block; margin: 10px 0 5px 0; }
         .txt-list-bold { font-weight: bold; display: block; margin: 5px 0; }
         
+        /* ## 문장 변환 스타일 규칙 */
+        .txt-heading { font-weight: bold; font-size: 1.2rem; color: #000; display: block; margin: 15px 0 10px 0; line-height: 1.4; }
+        
+        /* * 블릿 포인트 스타일 규칙 추가 */
+        .txt-bullet { display: block; padding-left: 15px; text-indent: -15px; margin: 5px 0; color: var(--text-color); }
+        
         .book-info { position: absolute; width: 80%; left: 10%; opacity: 0.7; font-size: 13px; z-index: 100; color: var(--text-color); display: flex; justify-content: space-between; align-items: center; }
         .book-header { top: 3vh; padding-bottom: 8px; border-bottom: 1.5px solid var(--line-color); }
         .book-footer { bottom: 2.5vh; padding-top: 8px; border-top: 1.5px solid var(--line-color); }
@@ -45,6 +51,13 @@
         
         #library-modal { width: min(500px, 85%); }
         #book-title { margin-bottom: 10px; padding: 15px; border-radius: 8px; border: 1px solid #ddd; width: 100%; box-sizing: border-box; font-size: 15px; font-weight: bold; }
+        
+        /* 찾기/바꾸기 컨테이너 스타일 */
+        .search-replace-box { display: flex; gap: 6px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        .search-replace-box input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; min-width: 0; }
+        .btn-replace { padding: 0 15px; background: #e67e22; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; white-space: nowrap; }
+        .btn-replace:hover { background: #d35400; }
+
         #editor { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit; resize: none; font-size: 15px; line-height: 1.6; min-height: 350px; flex: 1; }
         #temp-measurer { width: calc(var(--p-width) - 20vw); font-size: var(--font-size); line-height: 1.8; visibility: hidden; position: absolute; white-space: pre-wrap; word-break: break-all; }
     </style>
@@ -81,9 +94,19 @@
 
     <div id="toc-modal" class="modal"><h3>📖 목차</h3><div id="toc-list-container"></div><button class="btn-action" onclick="closeModal('toc-modal')">닫기</button></div>
     <div id="library-modal" class="modal"><h3>📚 내 서재</h3><div id="book-list-container"></div><button class="btn-action" onclick="closeModal('library-modal')">닫기</button></div>
+    
+    <!-- 편집 모달 -->
     <div id="setting-modal" class="modal">
         <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:15px;"><h2>🎨 편집</h2><button onclick="prepareNewBook()" style="background:#27ae60; color:white; border:none; padding:10px; border-radius:5px;">+ 새 도서</button></div>
         <input type="text" id="book-title" placeholder="제목">
+        
+        <!-- 찾기 / 바꾸기 입력 폼 -->
+        <div class="search-replace-box">
+            <input type="text" id="find-text" placeholder="찾을 텍스트">
+            <input type="text" id="replace-text" placeholder="바꿀 텍스트">
+            <button class="btn-replace" onclick="executeReplace()">모두 바꾸기</button>
+        </div>
+
         <textarea id="editor" placeholder="내용..."></textarea>
         <button class="btn-action" onclick="handleSave()">💾 저장</button>
         <button class="btn-action" style="background:#95a5a6;" onclick="closeModal('setting-modal')">닫기</button>
@@ -127,16 +150,21 @@
                 lines.forEach(line => {
                     if (line.trim().startsWith('{l}')) {
                         tocMap.push({ title: line.replace('{l}', '').trim(), page: pCount });
+                    } else if (line.trim().startsWith('**')) {
+                        // ** 규칙: 일기모드 전용 (뷰어 줄 구성에서 완전히 제외하여 숨김)
                     } else {
                         processedLines.push(line);
                     }
                 });
 
+                // 순서 재조정 및 규칙 적용
                 let processedHTML = processedLines.join('\n')
                     .replace(/"([^"]*)"/g, '<i>"$1"</i>')
                     .replace(/'([^']*)'/g, '<b>\'$1\'</b>')
                     .replace(/\(([^0-9][^)]*)\)/g, '<span class="txt-gray">($1)</span>')
                     .replace(/\[(.*?)\]/g, '<span class="txt-bold">$1</span>')
+                    .replace(/^##\s*(.*)$/gm, '<span class="txt-heading">$1</span>') 
+                    .replace(/^\*\s*(.*)$/gm, '<span class="txt-bullet">• $1</span>') // * 규칙: 블릿포인트 변환
                     .replace(/^(\d+\..*)$/gm, '<span class="txt-list-line">$1</span>')
                     .replace(/^(\d+\).*)$/gm, '<span class="txt-list-bold">$1</span>');
 
@@ -304,6 +332,56 @@
                 <div style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;" onclick="goToPage(${p}); closeModal('bookmark-modal');">🔖 페이지 ${p+1}</div>
             `).join('') || "북마크가 없습니다.";
             openModal('bookmark-modal');
+        }
+
+        /* 찾기 및 바꾸기 실행 함수 (자동 저장 및 메인 화면 복귀 로직 탑재) */
+        async function executeReplace() {
+            const editor = document.getElementById('editor');
+            const findInput = document.getElementById('find-text');
+            const replaceInput = document.getElementById('replace-text');
+            
+            const findText = findInput.value;
+            const replaceText = replaceInput.value;
+
+            if (!findText) {
+                alert("찾을 텍스트를 입력해주세요.");
+                return;
+            }
+
+            const currentContent = editor.value;
+            const matchCount = currentContent.split(findText).length - 1;
+
+            if (matchCount === 0) {
+                alert("일치하는 텍스트를 찾을 수 없습니다.");
+                return;
+            }
+
+            if (confirm(`총 ${matchCount}개의 단어를 교체하고 원래 화면으로 돌아가시겠습니까?`)) {
+                // 1. 텍스트 치환 및 검색창 비우기
+                editor.value = currentContent.split(findText).join(replaceText);
+                findInput.value = "";
+                replaceInput.value = "";
+
+                // 2. Supabase 서버 저장용 데이터 빌드
+                const title = document.getElementById('book-title').value;
+                const content = editor.value;
+                const data = { title, content, bookmarks: currentBookmarks };
+                
+                if (currentBookId) {
+                    await _supabase.from('ebooks').update(data).eq('id', currentBookId);
+                } else {
+                    const res = await _supabase.from('ebooks').insert([data]).select();
+                    if (res.data) currentBookId = res.data[0].id;
+                }
+                
+                // 3. 독서 뷰어 재구조화(랜더링) 및 동기화
+                await renderBook();
+                
+                // 4. 모달창을 닫고 메인 메뉴로 복귀
+                closeModal('setting-modal');
+                
+                alert(`총 ${matchCount}개의 단어가 수정되어 안전하게 저장되었습니다!`);
+            }
         }
 
         let startX = 0;
